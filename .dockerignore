@@ -1,0 +1,11 @@
+.github
+.vscode
+bin
+/bin/
+deploy/docker-compose.yaml
+deploy/Dockerfile
+Makefile
+.gitignore
+README.md
+
+*_test.go
