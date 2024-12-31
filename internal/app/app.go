@@ -3,6 +3,12 @@ package app
 import (
 	"context"
 	"errors"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	fiberSwagger "github.com/swaggo/fiber-swagger"
+	"go.uber.org/zap"
+
 	"github.com/1Storm3/flibox-api/database/postgres"
 	"github.com/1Storm3/flibox-api/internal/config"
 	"github.com/1Storm3/flibox-api/internal/controller/http"
@@ -15,61 +21,14 @@ import (
 	"github.com/1Storm3/flibox-api/internal/service"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 	"github.com/1Storm3/flibox-api/pkg/logger"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	fiberSwagger "github.com/swaggo/fiber-swagger"
-	"go.uber.org/zap"
 )
 
 type App struct {
 	httpServer *fiber.App
 }
 
-func (a *App) initFiberServer() {
-	a.httpServer = fiber.New(fiber.Config{
-		ErrorHandler: a.customErrorHandler(),
-	})
-}
-
-func (a *App) initCORS() {
-	a.httpServer.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-		AllowMethods: "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-	}))
-}
-
-func (a *App) initMetrics(ctx context.Context) error {
-	return metrics.Init(ctx)
-}
-
-func (a *App) initLogger(_ context.Context) error {
-	logger.Init(config.MustLoad().Env)
-	return nil
-}
-
-func (a *App) customErrorHandler() fiber.ErrorHandler {
-	return func(ctx *fiber.Ctx, err error) error {
-		code := fiber.StatusInternalServerError
-		var message string
-
-		var httpErr *httperror.Error
-		if errors.As(err, &httpErr) {
-			code = httpErr.Code()
-			message = httpErr.Error()
-		}
-
-		var fiberErr *fiber.Error
-		if errors.As(err, &fiberErr) {
-			code = fiberErr.Code
-			message = fiberErr.Message
-		}
-
-		return ctx.Status(code).JSON(fiber.Map{
-			"statusCode": code,
-			"message":    message,
-		})
-	}
+func New() *App {
+	return &App{}
 }
 
 func (a *App) Run(ctx context.Context) error {
@@ -188,4 +147,51 @@ func (a *App) Run(ctx context.Context) error {
 	<-ctx.Done()
 
 	return a.httpServer.Shutdown()
+}
+
+func (a *App) initFiberServer() {
+	a.httpServer = fiber.New(fiber.Config{
+		ErrorHandler: a.customErrorHandler(),
+	})
+}
+
+func (a *App) initCORS() {
+	a.httpServer.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowMethods: "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+	}))
+}
+
+func (a *App) initMetrics(ctx context.Context) error {
+	return metrics.Init(ctx)
+}
+
+func (a *App) initLogger(_ context.Context) error {
+	logger.Init(config.MustLoad().Env)
+	return nil
+}
+
+func (a *App) customErrorHandler() fiber.ErrorHandler {
+	return func(ctx *fiber.Ctx, err error) error {
+		code := fiber.StatusInternalServerError
+		var message string
+
+		var httpErr *httperror.Error
+		if errors.As(err, &httpErr) {
+			code = httpErr.Code()
+			message = httpErr.Error()
+		}
+
+		var fiberErr *fiber.Error
+		if errors.As(err, &fiberErr) {
+			code = fiberErr.Code
+			message = fiberErr.Message
+		}
+
+		return ctx.Status(code).JSON(fiber.Map{
+			"statusCode": code,
+			"message":    message,
+		})
+	}
 }

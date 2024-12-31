@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
-	"github.com/1Storm3/flibox-api/internal/app"
-	"github.com/1Storm3/flibox-api/pkg/logger"
-	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"go.uber.org/zap"
+
+	"github.com/1Storm3/flibox-api/internal/app"
+	"github.com/1Storm3/flibox-api/pkg/logger"
 )
 
 // @title Swagger Flibox API
@@ -27,8 +29,9 @@ func main() {
 		<-c
 		cancel()
 	}()
-	
-	a := &app.App{}
+
+	a := app.New()
+
 	if err := a.Run(ctx); err != nil {
 		logger.Error("Error running app", zap.Error(err))
 	}

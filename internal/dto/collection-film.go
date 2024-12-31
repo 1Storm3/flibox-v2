@@ -9,6 +9,13 @@ type DeleteCollectionFilmDTO struct {
 }
 
 type FilmsByCollectionIdDTO struct {
-	CollectionID string `json:"collectionId" validate:"required"`
-	Films        []Film `json:"films" validate:"required"`
+	CollectionID string            `json:"collectionId" validate:"required"`
+	Films        []ResponseFilmDTO `json:"films" validate:"required"`
+}
+
+type CollectionFilmRepoDTO struct {
+	CollectionID string            `json:"collectionId" gorm:"column:collection_id"`
+	FilmID       int               `json:"filmId" gorm:"column:film_id"`
+	Film         FilmRepoDTO       `gorm:"foreignKey:FilmID;references:ID"`
+	Collection   CollectionRepoDTO `gorm:"foreignKey:CollectionID;references:ID"`
 }

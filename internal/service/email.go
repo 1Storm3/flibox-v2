@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/1Storm3/flibox-api/internal/config"
+
 	"gopkg.in/gomail.v2"
 )
 

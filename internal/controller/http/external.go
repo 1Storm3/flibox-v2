@@ -2,14 +2,16 @@ package http
 
 import (
 	"fmt"
-	"github.com/1Storm3/flibox-api/internal/controller"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+
+	"github.com/1Storm3/flibox-api/internal/controller"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type ExternalController struct {

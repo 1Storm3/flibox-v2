@@ -3,11 +3,14 @@ package repo
 import (
 	"context"
 	"errors"
+	"net/http"
+
+	"gorm.io/gorm"
+
 	"github.com/1Storm3/flibox-api/database/postgres"
+	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"gorm.io/gorm"
-	"net/http"
 )
 
 type FilmSimilarRepo struct {
@@ -20,19 +23,22 @@ func NewFilmSimilarRepo(storage *postgres.Storage) *FilmSimilarRepo {
 	}
 }
 
-func (s *FilmSimilarRepo) GetAll(ctx context.Context, filmID string) ([]model.FilmSimilar, error) {
-	var filmSimilars []model.FilmSimilar
+func (s *FilmSimilarRepo) GetAll(ctx context.Context, filmID string) ([]dto.FilmSimilarRepoDTO, error) {
+	var filmSimilars []dto.FilmSimilarRepoDTO
 
 	result := s.storage.DB().
 		WithContext(ctx).
 		Where("film_id = ?", filmID).
-		Preload("Film").
+		Preload("Film", func(db *gorm.DB) *gorm.DB {
+			return db.Table("films")
+		}).
+		Table("film_similars").
 		Find(&filmSimilars)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return []model.FilmSimilar{}, nil
+		return []dto.FilmSimilarRepoDTO{}, nil
 	} else if result.Error != nil {
-		return []model.FilmSimilar{},
+		return []dto.FilmSimilarRepoDTO{},
 			httperror.New(
 				http.StatusInternalServerError,
 				result.Error.Error())
@@ -42,9 +48,10 @@ func (s *FilmSimilarRepo) GetAll(ctx context.Context, filmID string) ([]model.Fi
 }
 
 func (s *FilmSimilarRepo) Save(ctx context.Context, filmID int, similarID int) error {
-	var existingSimilar model.FilmSimilar
+	var existingSimilar dto.FilmSimilarRepoDTO
 
-	result := s.storage.DB().WithContext(ctx).Where("film_id = ? AND similar_id = ?", filmID, similarID).First(&existingSimilar)
+	result := s.storage.DB().WithContext(ctx).Where("film_id = ? AND similar_id = ?", filmID, similarID).
+		Table("film_similars").First(&existingSimilar)
 
 	if result.Error == nil {
 		return nil
@@ -56,7 +63,8 @@ func (s *FilmSimilarRepo) Save(ctx context.Context, filmID int, similarID int) e
 		)
 	}
 
-	createdResult := s.storage.DB().WithContext(ctx).Create(&model.FilmSimilar{
+	createdResult := s.storage.DB().WithContext(ctx).
+		Table("film_similars").Create(&model.FilmSimilar{
 		FilmID:    filmID,
 		SimilarID: similarID,
 	})

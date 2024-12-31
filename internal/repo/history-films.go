@@ -2,12 +2,15 @@ package repo
 
 import (
 	"context"
-	"github.com/1Storm3/flibox-api/database/postgres"
-	"github.com/1Storm3/flibox-api/internal/model"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/1Storm3/flibox-api/database/postgres"
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/model"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type HistoryFilmsRepo struct {
@@ -20,12 +23,16 @@ func NewHistoryFilmsRepo(storage *postgres.Storage) *HistoryFilmsRepo {
 	}
 }
 
-func (r *HistoryFilmsRepo) GetAll(ctx context.Context, userId string) ([]model.HistoryFilms, error) {
-	var historyFilms []model.HistoryFilms
+func (r *HistoryFilmsRepo) GetAll(ctx context.Context, userId string) ([]dto.HistoryFilmsRepoDTO, error) {
+	var historyFilms []dto.HistoryFilmsRepoDTO
 	res := r.storage.DB().WithContext(ctx).
 		Where("user_id = ?", userId).
 		Order("created_at DESC").
-		Preload("Film").Limit(5).
+		Preload("Film", func(db *gorm.DB) *gorm.DB {
+			return db.Table("films")
+		}).
+		Limit(5).
+		Table("history_films").
 		Find(&historyFilms)
 	if res.Error != nil {
 		return nil, httperror.New(
@@ -37,7 +44,8 @@ func (r *HistoryFilmsRepo) GetAll(ctx context.Context, userId string) ([]model.H
 }
 
 func (r *HistoryFilmsRepo) Add(ctx context.Context, filmId, userId string) error {
-	isExist := r.storage.DB().WithContext(ctx).Where("user_id = ? AND film_id = ?", userId, filmId).Find(&model.HistoryFilms{})
+	isExist := r.storage.DB().WithContext(ctx).Where("user_id = ? AND film_id = ?", userId, filmId).
+		Table("history_films").Find(&dto.HistoryFilmsRepoDTO{})
 	if isExist.RowsAffected > 0 {
 		return httperror.New(
 			http.StatusConflict,
@@ -45,7 +53,8 @@ func (r *HistoryFilmsRepo) Add(ctx context.Context, filmId, userId string) error
 		)
 	}
 	filmIdInt, _ := strconv.Atoi(filmId)
-	res := r.storage.DB().WithContext(ctx).Create(&model.HistoryFilms{
+	res := r.storage.DB().WithContext(ctx).
+		Table("history_films").Create(&model.HistoryFilms{
 		UserID: userId,
 		FilmID: filmIdInt,
 	})

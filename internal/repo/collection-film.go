@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/1Storm3/flibox-api/database/postgres"
-	"github.com/1Storm3/flibox-api/internal/model"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"gorm.io/gorm"
 	"net/http"
 	"strings"
+
+	"gorm.io/gorm"
+
+	"github.com/1Storm3/flibox-api/database/postgres"
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type CollectionFilmRepo struct {
@@ -26,14 +28,15 @@ func (c *CollectionFilmRepo) GetFilmsByCollectionId(
 	ctx context.Context,
 	collectionID string,
 	page int, pageSize int,
-) ([]model.Film, int64, error) {
-	var films []model.Film
+) ([]dto.FilmRepoDTO, int64, error) {
+	var films []dto.FilmRepoDTO
 	var totalRecords int64
 
 	offset := (page - 1) * pageSize
 
 	err := c.storage.DB().WithContext(ctx).
-		Model(&model.CollectionFilm{}).
+		Table("collection_films").
+		Model(&dto.FilmRepoDTO{}).
 		Where("collection_id = ?", collectionID).
 		Count(&totalRecords).Error
 	if err != nil {
@@ -41,7 +44,8 @@ func (c *CollectionFilmRepo) GetFilmsByCollectionId(
 	}
 
 	err = c.storage.DB().WithContext(ctx).
-		Model(&model.CollectionFilm{}).
+		Table("collection_films").
+		Model(&dto.FilmRepoDTO{}).
 		Select("films.id, films.name_ru, films.name_original, films.year, films.poster_url, films.rating_kinopoisk, films.type").
 		Joins("JOIN films ON films.id = collection_films.film_id").
 		Where("collection_films.collection_id = ?", collectionID).
@@ -59,7 +63,7 @@ func (c *CollectionFilmRepo) Add(
 	collectionId string,
 	filmId int,
 ) error {
-	var collection model.Collection
+	var collection dto.CollectionRepoDTO
 	err := c.storage.DB().WithContext(ctx).
 		Table("collections").
 		Where("id = ?", collectionId).
@@ -78,11 +82,11 @@ func (c *CollectionFilmRepo) Add(
 		)
 	}
 
-	newCollectionFilm := &model.CollectionFilm{
+	newCollectionFilm := &dto.CollectionFilmRepoDTO{
 		CollectionID: collectionId,
 		FilmID:       filmId,
 	}
-	err = c.storage.DB().WithContext(ctx).Create(newCollectionFilm).Error
+	err = c.storage.DB().WithContext(ctx).Table("collection_films").Create(newCollectionFilm).Error
 
 	if err != nil {
 		if strings.Contains(err.Error(), "violates unique constraint") {
@@ -108,8 +112,9 @@ func (c *CollectionFilmRepo) Add(
 
 func (c *CollectionFilmRepo) Delete(ctx context.Context, collectionId string, filmId int) error {
 	err := c.storage.DB().WithContext(ctx).
+		Table("collection_films").
 		Where("collection_id = ? AND film_id = ?", collectionId, filmId).
-		Delete(&model.CollectionFilm{}).Error
+		Delete(&dto.CollectionRepoDTO{}).Error
 
 	if err != nil {
 		return httperror.New(

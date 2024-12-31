@@ -1,11 +1,14 @@
 package http
 
 import (
+	"github.com/1Storm3/flibox-api/internal/mapper"
+	"net/http"
+
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"github.com/gofiber/fiber/v2"
-	"net/http"
 )
 
 type AuthController struct {
@@ -29,7 +32,11 @@ func (a *AuthController) Login(c *fiber.Ctx) error {
 			"statusCode": http.StatusBadRequest,
 		})
 	}
-	tokenUser, err := a.authService.Login(ctx, loginData)
+
+	user := mapper.MapLoginDTOToUserModel(loginData)
+
+	tokenUser, err := a.authService.Login(ctx, user)
+
 	if err != nil {
 		return httperror.HandleError(c, err)
 	}
@@ -49,7 +56,10 @@ func (a *AuthController) Register(c *fiber.Ctx) error {
 			"statusCode": http.StatusBadRequest,
 		})
 	}
-	result, err := a.authService.Register(ctx, requestUser)
+
+	user := mapper.MapRegisterDTOToUserModel(requestUser)
+
+	result, err := a.authService.Register(ctx, user)
 	if err != nil {
 		return httperror.HandleError(c, err)
 	}

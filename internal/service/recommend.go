@@ -2,13 +2,14 @@ package service
 
 import (
 	"context"
+	"strconv"
+
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/delivery/grpc"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/pkg/logger"
 	"github.com/1Storm3/flibox-api/pkg/proto/gengrpc"
-	"strconv"
 )
 
 type RecommendService struct {
@@ -77,7 +78,7 @@ func (s *RecommendService) CreateRecommendations(params dto.RecommendationsParam
 func (s *RecommendService) GetFilmNamesForRecommendations(ctx context.Context, userID string) ([]*gengrpc.Film, error) {
 	var filmNames []*gengrpc.Film
 
-	favouriteFilms, err := s.userFilmService.GetAll(ctx, userID, model.TypeUserFavourite, 5)
+	favouriteFilms, err := s.userFilmService.GetAll(ctx, userID, dto.TypeUserFavourite, 5)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +141,7 @@ func (s *RecommendService) AddFilmRecommendations(ctx context.Context, userID st
 		recommendFilms = append(recommendFilms, dto.Params{
 			UserID: userID,
 			FilmID: strconv.Itoa(*id),
-			Type:   model.TypeUserRecommend,
+			Type:   dto.TypeUserRecommend,
 		})
 	}
 

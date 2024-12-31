@@ -3,13 +3,14 @@ package http
 import (
 	"context"
 	"errors"
+	"net/http"
+
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 	"github.com/1Storm3/flibox-api/pkg/logger"
-	"github.com/gofiber/fiber/v2"
-	"net/http"
 )
 
 type UserFilmController struct {
@@ -36,7 +37,7 @@ func (g *UserFilmController) GetAll(c *fiber.Ctx) error {
 
 	ctx := c.Context()
 
-	films, err := g.userFilmService.GetAll(ctx, userID, model.TypeUserFilm(typeUserFilm), 20)
+	films, err := g.userFilmService.GetAll(ctx, userID, dto.TypeUserFilm(typeUserFilm), 20)
 	if err != nil {
 		return httperror.HandleError(c, err)
 	}
@@ -64,7 +65,7 @@ func (g *UserFilmController) Add(c *fiber.Ctx) error {
 		return httperror.HandleError(c, err)
 	}
 
-	if typeUserFilm == model.TypeUserFavourite {
+	if typeUserFilm == dto.TypeUserFavourite {
 		go func() {
 			err := g.recommendService.CreateRecommendations(dto.RecommendationsParams{
 				UserID: userID,
@@ -102,7 +103,7 @@ func (g *UserFilmController) Delete(c *fiber.Ctx) error {
 	})
 }
 
-func extractUserFilmParams(c *fiber.Ctx) (userID, filmID string, typeUserFilm model.TypeUserFilm, err error) {
+func extractUserFilmParams(c *fiber.Ctx) (userID, filmID string, typeUserFilm dto.TypeUserFilm, err error) {
 	userID = c.Locals("userClaims").(*dto.Claims).UserID
 	filmID = c.Params("filmId")
 
@@ -130,12 +131,12 @@ func (g *UserFilmController) checkFilmExistence(ctx context.Context, filmID stri
 	return nil
 }
 
-func ParseTypeUserFilm(s string, t *model.TypeUserFilm) error {
+func ParseTypeUserFilm(s string, t *dto.TypeUserFilm) error {
 	switch s {
-	case string(model.TypeUserFavourite):
-		*t = model.TypeUserFavourite
-	case string(model.TypeUserRecommend):
-		*t = model.TypeUserRecommend
+	case string(dto.TypeUserFavourite):
+		*t = dto.TypeUserFavourite
+	case string(dto.TypeUserRecommend):
+		*t = dto.TypeUserRecommend
 	default:
 		return errors.New("Неверный тип фильма: " + s)
 	}

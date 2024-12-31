@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+
+	"github.com/1Storm3/flibox-api/internal/mapper"
 	"github.com/1Storm3/flibox-api/internal/model"
 )
 
@@ -20,5 +22,16 @@ func (s *HistoryFilmsService) Add(ctx context.Context, filmId, userId string) er
 }
 
 func (s *HistoryFilmsService) GetAll(ctx context.Context, userId string) ([]model.HistoryFilms, error) {
-	return s.historyFilmsRepo.GetAll(ctx, userId)
+	result, err := s.historyFilmsRepo.GetAll(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	var historyFilms []model.HistoryFilms
+	for _, historyFilm := range result {
+		historyFilms = append(historyFilms, model.HistoryFilms{
+			Film: mapper.MapFilmRepoDTOToFilmModel(historyFilm.Film),
+		})
+	}
+	return historyFilms, nil
 }

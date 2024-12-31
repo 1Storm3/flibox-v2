@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/mapper"
 	"github.com/1Storm3/flibox-api/internal/model"
@@ -17,49 +18,52 @@ func NewCommentService(commentRepo CommentRepo) *CommentService {
 	}
 }
 
-func (c *CommentService) Create(ctx context.Context, comment dto.CreateCommentDTO, userID string) (dto.ResponseDTO, error) {
-	result, err := c.commentRepo.Create(ctx, model.Comment{
-		Content:  comment.Content,
-		FilmID:   comment.FilmID,
-		UserID:   userID,
-		ParentID: comment.ParentID,
-	})
+func (c *CommentService) Create(ctx context.Context, comment model.Comment) (model.Comment, error) {
+	commentRepo := mapper.MapCommentModelToCommentRepoDTO(comment)
+
+	result, err := c.commentRepo.Create(ctx, commentRepo)
 
 	if err != nil {
-		return dto.ResponseDTO{}, err
+		return model.Comment{}, err
 	}
-	return mapper.MapModelCommentToResponseDTO(result), nil
+	return mapper.MapCommentRepoDTOToCommentModel(result), nil
 }
 
-func (c *CommentService) GetOne(ctx context.Context, commentID string) (dto.ResponseDTO, error) {
+func (c *CommentService) GetOne(ctx context.Context, commentID string) (model.Comment, error) {
 	result, err := c.commentRepo.GetOne(ctx, commentID)
 	if err != nil {
-		return dto.ResponseDTO{}, err
+		return model.Comment{}, err
 	}
 
-	return mapper.MapModelCommentToResponseDTO(result), nil
+	return mapper.MapCommentRepoDTOToCommentModel(result), nil
 }
 
-func (c *CommentService) Update(ctx context.Context, comment dto.UpdateCommentDTO, commentID string) (dto.ResponseDTO, error) {
-	result, err := c.commentRepo.Update(ctx, comment, commentID)
+func (c *CommentService) Update(ctx context.Context, comment model.Comment, commentID string) (model.Comment, error) {
+	commentDto := mapper.MapCommentModelToCommentRepoDTO(comment)
+
+	result, err := c.commentRepo.Update(ctx, commentDto, commentID)
+
 	if err != nil {
-		return dto.ResponseDTO{}, err
+		return model.Comment{}, err
 	}
-	return mapper.MapModelCommentToResponseDTO(result), nil
+
+	return mapper.MapCommentRepoDTOToCommentModel(result), nil
 }
 
 func (c *CommentService) Delete(ctx context.Context, commentID string) error {
 	comment, err := c.commentRepo.GetOne(ctx, commentID)
+
 	if err != nil {
 		return err
 	}
+
 	if comment.ParentID == nil {
 		countChildComments, err := c.commentRepo.GetCountByParentId(ctx, commentID)
 		if err != nil {
 			return err
 		}
 		if countChildComments != 0 {
-			_, err := c.commentRepo.Update(ctx, dto.UpdateCommentDTO{Content: nil}, commentID)
+			_, err := c.commentRepo.Update(ctx, dto.CommentRepoDTO{Content: nil}, commentID)
 			if err != nil {
 				return err
 			}
@@ -96,17 +100,19 @@ func (c *CommentService) Delete(ctx context.Context, commentID string) error {
 	return nil
 }
 
-func (c *CommentService) GetAllByFilmId(ctx context.Context, filmID string, page int, pageSize int) ([]dto.ResponseDTO, int64, error) {
+func (c *CommentService) GetAllByFilmId(ctx context.Context, filmID string, page int, pageSize int) ([]model.Comment, int64, error) {
 	comments, totalRecords, err := c.commentRepo.GetAllByFilmId(ctx, filmID, page, pageSize)
+
 	if err != nil {
-		return []dto.ResponseDTO{}, 0, err
+		return []model.Comment{}, 0, err
 	}
-	var commentsDTO []dto.ResponseDTO
+
+	var commentsDTO []model.Comment
 	for _, comment := range comments {
-		commentsDTO = append(commentsDTO, mapper.MapModelCommentToResponseDTO(comment))
+		commentsDTO = append(commentsDTO, mapper.MapCommentRepoDTOToCommentModel(comment))
 	}
 	if len(commentsDTO) == 0 {
-		return []dto.ResponseDTO{}, totalRecords, nil
+		return []model.Comment{}, totalRecords, nil
 	}
 	return commentsDTO, totalRecords, nil
 }

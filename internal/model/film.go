@@ -1,20 +1,18 @@
 package model
 
-import "github.com/lib/pq"
-
 type Film struct {
-	ID              *int           `json:"kinopoiskId" gorm:"column:id"`
-	NameRU          *string        `json:"nameRu" gorm:"column:name_ru"`
-	NameOriginal    *string        `json:"nameOriginal" gorm:"column:name_original"`
-	Year            *int           `json:"year" gorm:"column:year"`
-	PosterURL       *string        `json:"posterUrl" gorm:"column:poster_url"`
-	RatingKinopoisk *float64       `json:"ratingKinopoisk" gorm:"column:rating_kinopoisk"`
-	Description     *string        `json:"description" gorm:"column:description"`
-	LogoURL         *string        `json:"logoUrl" gorm:"column:logo_url"`
-	Type            *string        `json:"type" gorm:"column:type"`
-	CoverURL        *string        `json:"coverUrl" gorm:"column:cover_url"`
-	TrailerURL      *string        `json:"trailerUrl" gorm:"column:trailer_url"`
-	Sequels         []*Film        `gorm:"many2many:film_sequels;joinForeignKey:film_id;JoinReferences:sequel_id"`
-	Similars        []*Film        `gorm:"many2many:film_similars;joinForeignKey:film_id;JoinReferences:similar_id"`
-	Genres          pq.StringArray `json:"genres" gorm:"type:text[];column:genres"`
+	ID              *int     `json:"kinopoiskId"`
+	NameRU          *string  `json:"nameRu"`
+	NameOriginal    *string  `json:"nameOriginal"`
+	Year            *int     `json:"year"`
+	PosterURL       *string  `json:"posterUrl"`
+	RatingKinopoisk *float64 `json:"ratingKinopoisk"`
+	Description     *string  `json:"description"`
+	LogoURL         *string  `json:"logoUrl"`
+	Type            *string  `json:"type"`
+	CoverURL        *string  `json:"coverUrl"`
+	TrailerURL      *string  `json:"trailerUrl"`
+	Sequels         []*Film
+	Similars        []*Film
+	Genres          []string `json:"genres"`
 }

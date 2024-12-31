@@ -2,13 +2,15 @@ package http
 
 import (
 	"errors"
+	"net/http"
+
+	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
+
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/mapper"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
-	"net/http"
 )
 
 type UserController struct {
@@ -30,7 +32,7 @@ func (h *UserController) GetOneByNickName(c *fiber.Ctx) error {
 	if err != nil {
 		return httperror.HandleError(c, err)
 	}
-	return c.JSON(user)
+	return c.JSON(mapper.MapUserModelToUserResponseDto(user))
 }
 
 func (h *UserController) Update(c *fiber.Ctx) error {
@@ -48,7 +50,9 @@ func (h *UserController) Update(c *fiber.Ctx) error {
 
 	userUpdateRequest.ID = id
 
-	result, err := h.userService.Update(ctx, userUpdateRequest)
+	userUpdate := mapper.MapUpdateUserDTOToUserModel(userUpdateRequest)
+
+	result, err := h.userService.Update(ctx, userUpdate)
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

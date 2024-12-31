@@ -1,9 +1,12 @@
 package http
 
 import (
-	"github.com/1Storm3/flibox-api/internal/controller"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/1Storm3/flibox-api/internal/controller"
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/mapper"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type FilmSequelController struct {
@@ -23,5 +26,9 @@ func (h *FilmSequelController) GetAll(c *fiber.Ctx) error {
 	if err != nil {
 		return httperror.HandleError(c, err)
 	}
-	return c.JSON(sequels)
+	var sequelsDTO []dto.ResponseFilmDTO
+	for _, sequel := range sequels {
+		sequelsDTO = append(sequelsDTO, mapper.MapModelFilmToResponseDTO(mapper.MapModelFilmSequelToModelFilm(sequel)))
+	}
+	return c.JSON(sequelsDTO)
 }

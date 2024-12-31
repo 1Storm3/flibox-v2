@@ -2,8 +2,12 @@ package service
 
 import (
 	"context"
+	"net/http"
+	"strconv"
+
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/mapper"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type CollectionFilmService struct {
@@ -19,17 +23,31 @@ func NewCollectionFilmService(collectionFilmRepo CollectionFilmRepo) *Collection
 func (c *CollectionFilmService) Add(
 	ctx context.Context,
 	collectionId string,
-	filmDto dto.CreateCollectionFilmDTO,
+	filmDto string,
 ) error {
-	return c.collectionFilmRepo.Add(ctx, collectionId, filmDto.FilmID)
+	filmIdInt, err := strconv.Atoi(filmDto)
+	if err != nil {
+		return httperror.New(
+			http.StatusBadRequest,
+			err.Error(),
+		)
+	}
+	return c.collectionFilmRepo.Add(ctx, collectionId, filmIdInt)
 }
 
 func (c *CollectionFilmService) Delete(
 	ctx context.Context,
 	collectionId string,
-	filmDto dto.DeleteCollectionFilmDTO,
+	filmDto string,
 ) error {
-	return c.collectionFilmRepo.Delete(ctx, collectionId, filmDto.FilmID)
+	filmIdInt, err := strconv.Atoi(filmDto)
+	if err != nil {
+		return httperror.New(
+			http.StatusBadRequest,
+			err.Error(),
+		)
+	}
+	return c.collectionFilmRepo.Delete(ctx, collectionId, filmIdInt)
 }
 
 func (c *CollectionFilmService) GetFilmsByCollectionId(
@@ -40,8 +58,21 @@ func (c *CollectionFilmService) GetFilmsByCollectionId(
 ) (films dto.FilmsByCollectionIdDTO, totalRecords int64, err error) {
 	result, totalRecords, err := c.collectionFilmRepo.GetFilmsByCollectionId(ctx, collectionID, page, pageSize)
 
+	if err != nil {
+		return dto.FilmsByCollectionIdDTO{}, 0, err
+	}
+
+	var filmsDTO []dto.ResponseFilmDTO
+	for _, film := range result {
+		filmsDTO = append(filmsDTO,
+			mapper.MapModelFilmToResponseDTO(
+				mapper.MapFilmRepoDTOToFilmModel(film),
+			),
+		)
+	}
+
 	return dto.FilmsByCollectionIdDTO{
 		CollectionID: collectionID,
-		Films:        mapper.MapModelFilmsToDTOs(result),
+		Films:        filmsDTO,
 	}, totalRecords, err
 }

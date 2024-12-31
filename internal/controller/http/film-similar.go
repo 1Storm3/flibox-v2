@@ -1,9 +1,12 @@
 package http
 
 import (
-	"github.com/1Storm3/flibox-api/internal/controller"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/1Storm3/flibox-api/internal/controller"
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/mapper"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type FilmSimilarController struct {
@@ -18,12 +21,14 @@ func NewFilmSimilarController(service controller.FilmSimilarService) *FilmSimila
 
 func (h *FilmSimilarController) GetAll(c *fiber.Ctx) error {
 	filmId := c.Params("id")
-
 	ctx := c.Context()
-
 	similars, err := h.service.GetAll(ctx, filmId)
 	if err != nil {
 		return httperror.HandleError(c, err)
 	}
-	return c.JSON(similars)
+	var similarsDTO []dto.ResponseFilmDTO
+	for _, similar := range similars {
+		similarsDTO = append(similarsDTO, mapper.MapModelFilmToResponseDTO(mapper.MapModelFilmSimilarToModelFilm(similar)))
+	}
+	return c.JSON(similarsDTO)
 }

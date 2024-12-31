@@ -3,11 +3,12 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/1Storm3/flibox-api/internal/config"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"io"
-	"net/http"
 )
 
 const baseUrlForAllFilms = "https://kinopoiskapiunofficial.tech/api/v2.2/films/"

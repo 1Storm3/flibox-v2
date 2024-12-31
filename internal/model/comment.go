@@ -1,15 +1,13 @@
 package model
 
-import "time"
-
 type Comment struct {
-	ID        string    `json:"id" gorm:"primaryKey;default:uuid_generate_v4()"`
-	FilmID    int       `json:"filmId" gorm:"column:film_id"`
-	UserID    string    `json:"userId" gorm:"column:user_id"`
-	ParentID  *string   `json:"parentId" gorm:"column:parent_id"`
-	Content   *string   `json:"content" gorm:"column:content"`
-	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt time.Time `json:"updatedAt" gorm:"column:updated_at"`
-	User      User      `gorm:"foreignKey:UserID;references:ID"`
-	Parent    *Comment  `gorm:"foreignKey:ParentID;references:ID;onDelete:CASCADE"`
+	ID        string  `json:"id"`
+	FilmID    int     `json:"filmId"`
+	UserID    string  `json:"userId"`
+	ParentID  *string `json:"parentId"`
+	Content   *string `json:"content"`
+	CreatedAt string  `json:"createdAt"`
+	UpdatedAt string  `json:"updatedAt"`
+	User      User
+	Parent    *Comment
 }

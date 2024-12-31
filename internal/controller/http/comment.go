@@ -1,12 +1,15 @@
 package http
 
 import (
-	"github.com/1Storm3/flibox-api/internal/controller"
-	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"github.com/gofiber/fiber/v2"
 	"net/http"
 	"strings"
+
+	"github.com/gofiber/fiber/v2"
+
+	"github.com/1Storm3/flibox-api/internal/controller"
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/mapper"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type CommentController struct {
@@ -31,8 +34,13 @@ func (h *CommentController) GetAllByFilmID(c *fiber.Ctx) error {
 
 	totalPages := (totalRecords + int64(pageSize) - 1) / int64(pageSize)
 
+	var resultDTO []dto.CommentResponseDTO
+	for _, comment := range comments {
+		resultDTO = append(resultDTO, mapper.MapCommentModelToCommentResponseDTO(comment))
+	}
+
 	return c.JSON(fiber.Map{
-		"comments":     comments,
+		"comments":     resultDTO,
 		"totalPages":   totalPages,
 		"totalRecords": totalRecords,
 		"currentPage":  page,
@@ -55,12 +63,19 @@ func (h *CommentController) Create(c *fiber.Ctx) error {
 	if len(strings.TrimSpace(*comment.Content)) == 0 {
 		return httperror.New(http.StatusBadRequest, "Комментарий не может быть пустым")
 	}
-	result, err := h.commentService.Create(ctx, comment, userId)
+
+	comment.UserID = userId
+
+	commentModel := mapper.MapCreateCommentDTOToCommentModel(comment)
+
+	result, err := h.commentService.Create(ctx, commentModel)
+
 	if err != nil {
 		return httperror.HandleError(c, err)
 	}
+
 	return c.JSON(fiber.Map{
-		"data": result,
+		"data": mapper.MapCommentModelToCommentResponseDTO(result),
 	})
 }
 
@@ -89,13 +104,17 @@ func (h *CommentController) Update(c *fiber.Ctx) error {
 			err.Error(),
 		)
 	}
+	commentDto.ID = commentId
 
-	result, err := h.commentService.Update(ctx, commentDto, commentId)
+	commentModel := mapper.MapUpdateCommentDTOToCommentModel(commentDto)
+
+	result, err := h.commentService.Update(ctx, commentModel, commentId)
+
 	if err != nil {
 		return httperror.HandleError(c, err)
 	}
 	return c.JSON(fiber.Map{
-		"data": result,
+		"data": mapper.MapCommentModelToCommentResponseDTO(result),
 	})
 }
 

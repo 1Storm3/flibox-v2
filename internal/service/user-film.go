@@ -2,11 +2,12 @@ package service
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/mapper"
 	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"net/http"
 )
 
 type UserFilmService struct {
@@ -27,20 +28,20 @@ func (s *UserFilmService) DeleteMany(ctx context.Context, userID string) error {
 	return s.userFilmRepo.DeleteMany(ctx, userID)
 }
 
-func (s *UserFilmService) GetAll(ctx context.Context, userId string, typeUserFilm model.TypeUserFilm, limit int) ([]dto.GetUserFilmResponseDTO, error) {
+func (s *UserFilmService) GetAll(ctx context.Context, userId string, typeUserFilm dto.TypeUserFilm, limit int) ([]model.UserFilm, error) {
 	result, err := s.userFilmRepo.GetAllForRecommend(ctx, userId, typeUserFilm, limit)
 
 	if err != nil {
 		return nil, err
 	}
 	if len(result) == 0 {
-		if typeUserFilm == model.TypeUserFavourite {
-			return []dto.GetUserFilmResponseDTO{}, httperror.New(
+		if typeUserFilm == dto.TypeUserFavourite {
+			return []model.UserFilm{}, httperror.New(
 				http.StatusNotFound,
 				"Избранные фильмы не найдены у этого пользователя",
 			)
 		} else {
-			return []dto.GetUserFilmResponseDTO{},
+			return []model.UserFilm{},
 				httperror.New(
 					http.StatusNotFound,
 					"Рекомендации не найдены у этого пользователя",
@@ -48,9 +49,9 @@ func (s *UserFilmService) GetAll(ctx context.Context, userId string, typeUserFil
 		}
 	}
 
-	var res []dto.GetUserFilmResponseDTO
+	var res []model.UserFilm
 	for _, film := range result {
-		res = append(res, mapper.MapDomainUserFilmToResponseDTO(film))
+		res = append(res, mapper.MapUserFilmRepoDTOToUserFilmModel(film))
 	}
 
 	return res, nil

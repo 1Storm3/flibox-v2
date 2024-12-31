@@ -3,13 +3,14 @@ package repo
 import (
 	"context"
 	"errors"
-	"github.com/1Storm3/flibox-api/database/postgres"
-	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/model"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"gorm.io/gorm"
 	"net/http"
 	"strings"
+
+	"gorm.io/gorm"
+
+	"github.com/1Storm3/flibox-api/database/postgres"
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type UserRepo struct {
@@ -22,11 +23,11 @@ func NewUserRepo(storage *postgres.Storage) *UserRepo {
 	}
 }
 
-func (u *UserRepo) UpdateForVerify(ctx context.Context, userDTO dto.UpdateForVerifyDTO) (model.User, error) {
-	var user model.User
-	result := u.storage.DB().WithContext(ctx).Where("id = ?", userDTO.ID).First(&user)
+func (u *UserRepo) UpdateForVerify(ctx context.Context, userDTO dto.UserRepoDTO) (dto.UserRepoDTO, error) {
+	var user dto.UserRepoDTO
+	result := u.storage.DB().WithContext(ctx).Where("id = ?", userDTO.ID).Table("users").First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return model.User{},
+		return dto.UserRepoDTO{},
 			httperror.New(
 				http.StatusNotFound,
 				"Пользователь не найден",
@@ -36,9 +37,9 @@ func (u *UserRepo) UpdateForVerify(ctx context.Context, userDTO dto.UpdateForVer
 	user.IsVerified = userDTO.IsVerified
 	user.VerifiedToken = userDTO.VerifiedToken
 
-	result = u.storage.DB().WithContext(ctx).Save(&user)
+	result = u.storage.DB().WithContext(ctx).Table("users").Save(&user)
 	if result.Error != nil {
-		return model.User{},
+		return dto.UserRepoDTO{},
 			httperror.New(
 				http.StatusInternalServerError,
 				result.Error.Error(),
@@ -47,8 +48,8 @@ func (u *UserRepo) UpdateForVerify(ctx context.Context, userDTO dto.UpdateForVer
 	return user, nil
 }
 
-func (u *UserRepo) GetOneByNickName(ctx context.Context, nickName string) (model.User, error) {
-	var user model.User
+func (u *UserRepo) GetOneByNickName(ctx context.Context, nickName string) (dto.UserRepoDTO, error) {
+	var user dto.UserRepoDTO
 	result := u.storage.DB().WithContext(ctx).
 		Select("id",
 			"nick_name",
@@ -61,15 +62,16 @@ func (u *UserRepo) GetOneByNickName(ctx context.Context, nickName string) (model
 			"created_at",
 		).
 		Where("nick_name = ?", nickName).
+		Table("users").
 		First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return model.User{},
+		return dto.UserRepoDTO{},
 			httperror.New(
 				http.StatusNotFound,
 				"Пользователь не найден",
 			)
 	} else if result.Error != nil {
-		return model.User{},
+		return dto.UserRepoDTO{},
 			httperror.New(
 				http.StatusInternalServerError,
 				result.Error.Error(),
@@ -78,8 +80,8 @@ func (u *UserRepo) GetOneByNickName(ctx context.Context, nickName string) (model
 	return user, nil
 }
 
-func (u *UserRepo) GetOneById(ctx context.Context, id string) (model.User, error) {
-	var user model.User
+func (u *UserRepo) GetOneById(_ context.Context, id string) (dto.UserRepoDTO, error) {
+	var user dto.UserRepoDTO
 
 	result := u.storage.DB().
 		Select("id",
@@ -94,15 +96,16 @@ func (u *UserRepo) GetOneById(ctx context.Context, id string) (model.User, error
 			"created_at",
 		).
 		Where("id = ?", id).
+		Table("users").
 		First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return model.User{},
+		return dto.UserRepoDTO{},
 			httperror.New(
 				http.StatusNotFound,
 				"Пользователь не найден",
 			)
 	} else if result.Error != nil {
-		return model.User{},
+		return dto.UserRepoDTO{},
 			httperror.New(
 				http.StatusInternalServerError,
 				result.Error.Error(),
@@ -112,14 +115,14 @@ func (u *UserRepo) GetOneById(ctx context.Context, id string) (model.User, error
 	return user, nil
 }
 
-func (u *UserRepo) GetOneByEmail(ctx context.Context, email string) (model.User, error) {
-	var user model.User
+func (u *UserRepo) GetOneByEmail(ctx context.Context, email string) (dto.UserRepoDTO, error) {
+	var user dto.UserRepoDTO
 
-	result := u.storage.DB().WithContext(ctx).Where("email = ?", email).First(&user)
+	result := u.storage.DB().WithContext(ctx).Where("email = ?", email).Table("users").First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return model.User{}, nil
+		return dto.UserRepoDTO{}, nil
 	} else if result.Error != nil {
-		return model.User{},
+		return dto.UserRepoDTO{},
 			httperror.New(
 				http.StatusInternalServerError,
 				result.Error.Error(),
@@ -129,10 +132,10 @@ func (u *UserRepo) GetOneByEmail(ctx context.Context, email string) (model.User,
 	return user, nil
 }
 
-func (u *UserRepo) Create(ctx context.Context, user model.User) (model.User, error) {
-	result := u.storage.DB().WithContext(ctx).Create(&user)
+func (u *UserRepo) Create(ctx context.Context, user dto.UserRepoDTO) (dto.UserRepoDTO, error) {
+	result := u.storage.DB().WithContext(ctx).Table("users").Create(&user)
 	if result.Error != nil {
-		return model.User{},
+		return dto.UserRepoDTO{},
 			httperror.New(
 				http.StatusInternalServerError,
 				result.Error.Error(),
@@ -141,23 +144,23 @@ func (u *UserRepo) Create(ctx context.Context, user model.User) (model.User, err
 	return user, nil
 }
 
-func (u *UserRepo) Update(ctx context.Context, userDTO dto.UpdateUserDTO) (model.User, error) {
-	tx := u.storage.DB().WithContext(ctx).Begin()
-	var user model.User
+func (u *UserRepo) Update(ctx context.Context, userDTO dto.UserRepoDTO) (dto.UserRepoDTO, error) {
+	tx := u.storage.DB().WithContext(ctx).Begin().Table("users")
+	var user dto.UserRepoDTO
 	if err := tx.Where("id = ?", userDTO.ID).First(&user).Error; err != nil {
 		tx.Rollback()
-		return model.User{}, httperror.New(http.StatusNotFound, "Пользователь не найден")
+		return dto.UserRepoDTO{}, httperror.New(http.StatusNotFound, "Пользователь не найден")
 	}
 
 	if err := tx.Model(&user).Updates(userDTO).Error; err != nil {
 		tx.Rollback()
 		if strings.Contains(err.Error(), "duplicate key value") {
-			return model.User{}, httperror.New(
+			return dto.UserRepoDTO{}, httperror.New(
 				http.StatusConflict,
 				"Пользователь с таким никнеймом или почтой уже существует",
 			)
 		}
-		return model.User{}, httperror.New(http.StatusInternalServerError, err.Error())
+		return dto.UserRepoDTO{}, httperror.New(http.StatusInternalServerError, err.Error())
 	}
 
 	tx.Commit()

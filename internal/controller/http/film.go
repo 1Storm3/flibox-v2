@@ -1,10 +1,14 @@
 package http
 
 import (
-	"github.com/1Storm3/flibox-api/internal/controller"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"github.com/gofiber/fiber/v2"
 	"strings"
+
+	"github.com/gofiber/fiber/v2"
+
+	"github.com/1Storm3/flibox-api/internal/controller"
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/mapper"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type FilmController struct {
@@ -34,14 +38,20 @@ func (h *FilmController) Search(c *fiber.Ctx) error {
 	}
 	totalPages := (totalRecords + int64(pageSize) - 1) / int64(pageSize)
 
+	var filmsDTO []dto.FilmSearchResponseDTO
+	for _, film := range films {
+		filmsDTO = append(filmsDTO, mapper.MapModelFilmToResponseSearchDTO(film))
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"films":        films,
+		"films":        filmsDTO,
 		"totalPages":   totalPages,
 		"totalRecords": totalRecords,
 		"currentPage":  page,
 		"pageSize":     pageSize,
 	})
 }
+
 func (h *FilmController) GetOneByID(c *fiber.Ctx) error {
 	filmId := c.Params("id")
 	ctx := c.Context()
@@ -51,5 +61,5 @@ func (h *FilmController) GetOneByID(c *fiber.Ctx) error {
 		return httperror.HandleError(c, err)
 	}
 
-	return c.JSON(film)
+	return c.JSON(mapper.MapModelFilmToResponseDTO(film))
 }

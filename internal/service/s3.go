@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	appConfig "github.com/1Storm3/flibox-api/internal/config"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"net/http"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"net/http"
+
+	appConfig "github.com/1Storm3/flibox-api/internal/config"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type S3Service struct {

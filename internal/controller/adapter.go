@@ -2,40 +2,41 @@ package controller
 
 import (
 	"context"
+	"time"
+
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/pkg/proto/gengrpc"
-	"time"
 )
 
 type AuthService interface {
-	Login(ctx context.Context, dto dto.LoginDTO) (string, error)
-	Register(ctx context.Context, user dto.RegisterDTO) (bool, error)
-	Me(ctx context.Context, userId string) (dto.MeResponseDTO, error)
-	Verify(ctx context.Context, tokenDto string) error
+	Login(ctx context.Context, req model.User) (string, error)
+	Register(ctx context.Context, user model.User) (bool, error)
+	Me(ctx context.Context, userId string) (model.User, error)
+	Verify(ctx context.Context, token string) error
 }
 
 type CollectionService interface {
-	Create(ctx context.Context, collection dto.CreateCollectionDTO, userID string) (dto.ResponseCollectionDTO, error)
-	GetAll(ctx context.Context, page, pageSize int) ([]dto.ResponseCollectionDTO, int64, error)
-	GetOne(ctx context.Context, collectionId string) (dto.ResponseCollectionDTO, error)
-	Update(ctx context.Context, collection dto.UpdateCollectionDTO, collectionId string) (dto.ResponseCollectionDTO, error)
+	Create(ctx context.Context, collection model.Collection, userID string) (model.Collection, error)
+	GetAll(ctx context.Context, page, pageSize int) ([]model.Collection, int64, error)
+	GetOne(ctx context.Context, collectionId string) (model.Collection, error)
+	Update(ctx context.Context, collection model.Collection) (model.Collection, error)
 	Delete(ctx context.Context, collectionId string) error
-	GetAllMy(ctx context.Context, page, pageSize int, userID string) ([]dto.ResponseCollectionDTO, int64, error)
+	GetAllMy(ctx context.Context, page, pageSize int, userID string) ([]model.Collection, int64, error)
 }
 
 type CollectionFilmService interface {
-	Add(ctx context.Context, collectionId string, filmDto dto.CreateCollectionFilmDTO) error
-	Delete(ctx context.Context, collectionId string, filmDto dto.DeleteCollectionFilmDTO) error
+	Add(ctx context.Context, collectionId, filmId string) error
+	Delete(ctx context.Context, collectionId, filmId string) error
 	GetFilmsByCollectionId(ctx context.Context, collectionID string, page int, pageSize int) (films dto.FilmsByCollectionIdDTO, totalRecords int64, err error)
 }
 
 type CommentService interface {
-	Create(ctx context.Context, comment dto.CreateCommentDTO, userID string) (dto.ResponseDTO, error)
-	Update(ctx context.Context, comment dto.UpdateCommentDTO, commentID string) (dto.ResponseDTO, error)
+	Create(ctx context.Context, comment model.Comment) (model.Comment, error)
+	Update(ctx context.Context, comment model.Comment, commentID string) (model.Comment, error)
 	Delete(ctx context.Context, commentID string) error
-	GetAllByFilmId(ctx context.Context, filmID string, page int, pageSize int) ([]dto.ResponseDTO, int64, error)
-	GetOne(ctx context.Context, commentID string) (dto.ResponseDTO, error)
+	GetAllByFilmId(ctx context.Context, filmID string, page int, pageSize int) ([]model.Comment, int64, error)
+	GetOne(ctx context.Context, commentID string) (model.Comment, error)
 }
 
 type HistoryFilmsService interface {
@@ -58,12 +59,12 @@ type UserService interface {
 	HashPassword(ctx context.Context, password string) (string, error)
 	Create(ctx context.Context, user model.User) (model.User, error)
 	GetOneById(ctx context.Context, id string) (model.User, error)
-	Update(ctx context.Context, userDTO dto.UpdateUserDTO) (model.User, error)
-	UpdateForVerify(ctx context.Context, userDTO dto.UpdateForVerifyDTO) (model.User, error)
+	Update(ctx context.Context, userDTO model.User) (model.User, error)
+	UpdateForVerify(ctx context.Context, userDTO model.User) (model.User, error)
 }
 
 type UserFilmService interface {
-	GetAll(ctx context.Context, userId string, typeUserFilm model.TypeUserFilm, limit int) ([]dto.GetUserFilmResponseDTO, error)
+	GetAll(ctx context.Context, userId string, typeUserFilm dto.TypeUserFilm, limit int) ([]model.UserFilm, error)
 	Add(ctx context.Context, params dto.Params) error
 	Delete(ctx context.Context, params dto.Params) error
 	AddMany(ctx context.Context, params []dto.Params) error
@@ -71,22 +72,22 @@ type UserFilmService interface {
 }
 
 type FilmSequelService interface {
-	GetAll(ctx context.Context, filmId string) ([]dto.ResponseFilmDTO, error)
-	FetchSequels(ctx context.Context, filmId string) ([]dto.ResponseFilmDTO, error)
+	GetAll(ctx context.Context, filmId string) ([]model.FilmSequel, error)
+	FetchSequels(ctx context.Context, filmId string) ([]model.FilmSequel, error)
 }
 
 type FilmSimilarService interface {
-	GetAll(ctx context.Context, filmId string) ([]dto.ResponseFilmDTO, error)
-	FetchSimilar(ctx context.Context, filmId string) ([]dto.ResponseFilmDTO, error)
+	GetAll(ctx context.Context, filmId string) ([]model.FilmSimilar, error)
+	FetchSimilar(ctx context.Context, filmId string) ([]model.FilmSimilar, error)
 }
 type EmailService interface {
 	SendEmail(email, body, subject string) error
 }
 
 type FilmService interface {
-	GetOne(ctx context.Context, filmId string) (dto.ResponseFilmDTO, error)
-	Search(ctx context.Context, match string, genres []string, page, pageSize int) ([]dto.SearchResponseDTO, int64, error)
-	GetOneByNameRu(ctx context.Context, nameRu string) (dto.ResponseFilmDTO, error)
+	GetOne(ctx context.Context, filmId string) (model.Film, error)
+	Search(ctx context.Context, match string, genres []string, page, pageSize int) ([]model.Film, int64, error)
+	GetOneByNameRu(ctx context.Context, nameRu string) (model.Film, error)
 }
 
 type ExternalService interface {

@@ -1,11 +1,12 @@
 package http
 
 import (
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 	"github.com/1Storm3/flibox-api/pkg/logger"
-	"github.com/gofiber/fiber/v2"
 )
 
 type HistoryFilmsController struct {

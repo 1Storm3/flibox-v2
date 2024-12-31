@@ -3,13 +3,14 @@ package repo
 import (
 	"context"
 	"errors"
-	"github.com/1Storm3/flibox-api/database/postgres"
-	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/model"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"gorm.io/gorm"
 	"net/http"
 	"strings"
+
+	"gorm.io/gorm"
+
+	"github.com/1Storm3/flibox-api/database/postgres"
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type CommentRepo struct {
@@ -22,25 +23,29 @@ func NewCommentRepo(storage *postgres.Storage) *CommentRepo {
 	}
 }
 
-func (c *CommentRepo) Create(ctx context.Context, comment model.Comment) (model.Comment, error) {
-	result := c.storage.DB().WithContext(ctx).Create(&comment)
+func (c *CommentRepo) Create(ctx context.Context, comment dto.CommentRepoDTO) (dto.CommentRepoDTO, error) {
+	result := c.storage.DB().WithContext(ctx).Table("comments").Create(&comment)
 
 	if result.Error != nil {
 		if strings.Contains(result.Error.Error(), "violates foreign key") {
-			return model.Comment{}, httperror.New(
+			return dto.CommentRepoDTO{}, httperror.New(
 				http.StatusConflict,
 				"Родительского комментария не существует с таким ID",
 			)
 		}
-		return model.Comment{}, httperror.New(
+		return dto.CommentRepoDTO{}, httperror.New(
 			http.StatusInternalServerError,
 			result.Error.Error(),
 		)
 	}
 
-	err := c.storage.DB().WithContext(ctx).Preload("User").First(&comment, "id = ?", comment.ID).Error
+	err := c.storage.DB().WithContext(ctx).Table("comments").
+		Preload("User", func(db *gorm.DB) *gorm.DB {
+			return db.Table("users")
+		}).
+		First(&comment, "id = ?", comment.ID).Error
 	if err != nil {
-		return model.Comment{}, httperror.New(
+		return dto.CommentRepoDTO{}, httperror.New(
 			http.StatusInternalServerError,
 			err.Error(),
 		)
@@ -52,7 +57,8 @@ func (c *CommentRepo) Create(ctx context.Context, comment model.Comment) (model.
 func (c *CommentRepo) GetCountByParentId(ctx context.Context, parentId string) (int64, error) {
 	var count int64
 	err := c.storage.DB().WithContext(ctx).
-		Model(&model.Comment{}).
+		Table("comments").
+		Model(&dto.CommentRepoDTO{}).
 		Where("parent_id = ?", parentId).
 		Count(&count).Error
 
@@ -66,17 +72,21 @@ func (c *CommentRepo) GetCountByParentId(ctx context.Context, parentId string) (
 	return count, nil
 }
 
-func (c *CommentRepo) GetOne(ctx context.Context, commentID string) (model.Comment, error) {
-	var comment model.Comment
+func (c *CommentRepo) GetOne(ctx context.Context, commentID string) (dto.CommentRepoDTO, error) {
+	var comment dto.CommentRepoDTO
 
-	err := c.storage.DB().WithContext(ctx).Where("id = ?", commentID).Preload("User").First(&comment).Error
+	err := c.storage.DB().WithContext(ctx).Where("id = ?", commentID).
+		Preload("User", func(db *gorm.DB) *gorm.DB {
+			return db.Table("users")
+		}).
+		Table("comments").First(&comment).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return model.Comment{}, httperror.New(
+		return dto.CommentRepoDTO{}, httperror.New(
 			http.StatusNotFound,
 			"Комментарий не найден",
 		)
 	} else if err != nil {
-		return model.Comment{}, httperror.New(
+		return dto.CommentRepoDTO{}, httperror.New(
 			http.StatusInternalServerError,
 			err.Error(),
 		)
@@ -87,8 +97,9 @@ func (c *CommentRepo) GetOne(ctx context.Context, commentID string) (model.Comme
 
 func (c *CommentRepo) Delete(ctx context.Context, commentID string) error {
 	err := c.storage.DB().WithContext(ctx).
+		Table("comments").
 		Where("id = ?", commentID).
-		Delete(&model.Comment{}).
+		Delete(&dto.CommentRepoDTO{}).
 		Error
 
 	if err != nil {
@@ -100,15 +111,15 @@ func (c *CommentRepo) Delete(ctx context.Context, commentID string) error {
 	return nil
 }
 
-func (c *CommentRepo) GetAllByFilmId(ctx context.Context, filmID string, page, pageSize int) ([]model.Comment, int64, error) {
-	var comments []model.Comment
+func (c *CommentRepo) GetAllByFilmId(ctx context.Context, filmID string, page, pageSize int) ([]dto.CommentRepoDTO, int64, error) {
+	var comments []dto.CommentRepoDTO
 	var totalRecords int64
 
 	offset := (page - 1) * pageSize
 
-	err := c.storage.DB().WithContext(ctx).Model(&model.Comment{}).Where("film_id = ?", filmID).Count(&totalRecords).Error
+	err := c.storage.DB().WithContext(ctx).Table("comments").Model(&dto.CommentRepoDTO{}).Where("film_id = ?", filmID).Count(&totalRecords).Error
 	if err != nil {
-		return []model.Comment{}, 0, httperror.New(
+		return []dto.CommentRepoDTO{}, 0, httperror.New(
 			http.StatusInternalServerError,
 			err.Error(),
 		)
@@ -116,16 +127,19 @@ func (c *CommentRepo) GetAllByFilmId(ctx context.Context, filmID string, page, p
 
 	err = c.storage.DB().WithContext(ctx).
 		Where("film_id = ?", filmID).
-		Preload("User").
+		Preload("User", func(db *gorm.DB) *gorm.DB {
+			return db.Table("users")
+		}).
 		Order("created_at DESC").
 		Limit(pageSize).
 		Offset(offset).
+		Table("comments").
 		Find(&comments).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return []model.Comment{}, 0, nil
+		return []dto.CommentRepoDTO{}, 0, nil
 	} else if err != nil {
-		return []model.Comment{}, 0, httperror.New(
+		return []dto.CommentRepoDTO{}, 0, httperror.New(
 			http.StatusInternalServerError,
 			err.Error(),
 		)
@@ -134,22 +148,26 @@ func (c *CommentRepo) GetAllByFilmId(ctx context.Context, filmID string, page, p
 	return comments, totalRecords, nil
 }
 
-func (c *CommentRepo) Update(ctx context.Context, commentDTO dto.UpdateCommentDTO, commentID string) (model.Comment, error) {
-	var comment model.Comment
+func (c *CommentRepo) Update(ctx context.Context, commentDTO dto.CommentRepoDTO, commentID string) (dto.CommentRepoDTO, error) {
+	var comment dto.CommentRepoDTO
 	if commentDTO.Content == nil {
-		err := c.storage.DB().WithContext(ctx).Model(&comment).Where("id = ?", commentID).Update("content", nil).Error
+		err := c.storage.DB().WithContext(ctx).Table("comments").Model(&comment).Where("id = ?", commentID).Update("content", nil).Error
 		if err != nil {
-			return model.Comment{}, httperror.New(http.StatusInternalServerError, err.Error())
+			return dto.CommentRepoDTO{}, httperror.New(http.StatusInternalServerError, err.Error())
 		}
 	} else {
-		err := c.storage.DB().WithContext(ctx).Model(&comment).Where("id = ?", commentID).Updates(commentDTO).Error
+		err := c.storage.DB().WithContext(ctx).Table("comments").Model(&comment).Where("id = ?", commentID).Updates(commentDTO).Error
 		if err != nil {
-			return model.Comment{}, httperror.New(http.StatusInternalServerError, err.Error())
+			return dto.CommentRepoDTO{}, httperror.New(http.StatusInternalServerError, err.Error())
 		}
 	}
-	err := c.storage.DB().WithContext(ctx).Preload("User").First(&comment, "id = ?", commentID).Error
+	err := c.storage.DB().WithContext(ctx).
+		Preload("User", func(db *gorm.DB) *gorm.DB {
+			return db.Table("users")
+		}).
+		Table("comments").First(&comment, "id = ?", commentID).Error
 	if err != nil {
-		return model.Comment{}, httperror.New(
+		return dto.CommentRepoDTO{}, httperror.New(
 			http.StatusInternalServerError,
 			err.Error(),
 		)

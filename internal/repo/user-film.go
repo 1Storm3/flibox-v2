@@ -3,13 +3,15 @@ package repo
 import (
 	"context"
 	"errors"
+	"net/http"
+	"strconv"
+
+	"gorm.io/gorm"
+
 	"github.com/1Storm3/flibox-api/database/postgres"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"gorm.io/gorm"
-	"net/http"
-	"strconv"
 )
 
 type UserFilmRepo struct {
@@ -39,7 +41,7 @@ func (u *UserFilmRepo) AddMany(ctx context.Context, params []dto.Params) error {
 		})
 	}
 
-	result := u.storage.DB().WithContext(ctx).Create(&userFilms)
+	result := u.storage.DB().WithContext(ctx).Table("user_films").Create(&userFilms)
 	if result.Error != nil {
 		return httperror.New(
 			http.StatusInternalServerError,
@@ -52,8 +54,9 @@ func (u *UserFilmRepo) AddMany(ctx context.Context, params []dto.Params) error {
 func (u *UserFilmRepo) DeleteMany(ctx context.Context, userID string) error {
 	result := u.storage.DB().
 		WithContext(ctx).
-		Where("user_id = ? AND type = ?", userID, model.TypeUserRecommend).
-		Delete(&model.UserFilm{})
+		Where("user_id = ? AND type = ?", userID, dto.TypeUserRecommend).
+		Table("user_films").
+		Delete(&dto.UserFilmRepoDTO{})
 	if result.Error != nil {
 		return httperror.New(
 			http.StatusInternalServerError,
@@ -63,21 +66,24 @@ func (u *UserFilmRepo) DeleteMany(ctx context.Context, userID string) error {
 	return nil
 }
 
-func (u *UserFilmRepo) GetAllForRecommend(ctx context.Context, userId string, typeUserFilm model.TypeUserFilm, limit int) ([]model.UserFilm, error) {
-	var userFilms []model.UserFilm
+func (u *UserFilmRepo) GetAllForRecommend(ctx context.Context, userId string, typeUserFilm dto.TypeUserFilm, limit int) ([]dto.UserFilmRepoDTO, error) {
+	var userFilms []dto.UserFilmRepoDTO
 	result := u.storage.DB().
 		WithContext(ctx).
 		Where("user_id = ?", userId).
 		Where("type = ?", typeUserFilm).
-		Preload("Film").
+		Preload("Film", func(db *gorm.DB) *gorm.DB {
+			return db.Table("films")
+		}).
 		Limit(limit).
+		Table("user_films").
 		Find(&userFilms)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return []model.UserFilm{}, nil
+		return []dto.UserFilmRepoDTO{}, nil
 
 	} else if result.Error != nil {
-		return []model.UserFilm{},
+		return []dto.UserFilmRepoDTO{},
 			httperror.New(
 				http.StatusInternalServerError,
 				result.Error.Error(),
@@ -97,7 +103,8 @@ func (u *UserFilmRepo) Add(ctx context.Context, params dto.Params) error {
 
 	isFavourite := u.storage.DB().WithContext(ctx).
 		Where("user_id = ? AND film_id = ? AND type = ?", params.UserID, filmIDInt, params.Type).
-		Find(&model.UserFilm{})
+		Table("user_films").
+		Find(&dto.UserFilmRepoDTO{})
 	if isFavourite.RowsAffected > 0 {
 		return httperror.New(
 			http.StatusConflict,
@@ -105,7 +112,7 @@ func (u *UserFilmRepo) Add(ctx context.Context, params dto.Params) error {
 		)
 	}
 
-	result := u.storage.DB().WithContext(ctx).Create(&model.UserFilm{
+	result := u.storage.DB().WithContext(ctx).Table("user_films").Create(&model.UserFilm{
 		UserID: params.UserID,
 		FilmID: filmIDInt,
 		Type:   params.Type,
@@ -122,16 +129,19 @@ func (u *UserFilmRepo) Add(ctx context.Context, params dto.Params) error {
 func (u *UserFilmRepo) Delete(ctx context.Context, params dto.Params) error {
 	isFavourite := u.storage.DB().WithContext(ctx).
 		Where("user_id = ? AND film_id = ? AND type = ?", params.UserID, params.FilmID, params.Type).
-		Find(&model.UserFilm{})
+		Table("user_films").
+		Find(&dto.UserFilmRepoDTO{})
 	if isFavourite.RowsAffected == 0 {
 		return httperror.New(
 			http.StatusNotFound,
 			"Фильм не найден в избранном",
 		)
 	}
+
 	result := u.storage.DB().WithContext(ctx).
 		Where("user_id = ? AND film_id = ? AND type = ?", params.UserID, params.FilmID, params.Type).
-		Delete(&model.UserFilm{})
+		Table("user_films").
+		Delete(&dto.UserFilmRepoDTO{})
 	if result.Error != nil {
 		return httperror.New(
 			http.StatusInternalServerError,

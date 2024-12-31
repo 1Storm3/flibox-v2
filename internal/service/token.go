@@ -1,12 +1,14 @@
 package service
 
 import (
-	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"github.com/golang-jwt/jwt"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/golang-jwt/jwt"
+
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type EmailClaims struct {

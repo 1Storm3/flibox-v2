@@ -2,17 +2,17 @@ package service
 
 import (
 	"context"
+	"net/http"
+	"time"
+
+	"go.uber.org/zap"
+
 	"github.com/1Storm3/flibox-api/internal/config"
 	"github.com/1Storm3/flibox-api/internal/controller"
-	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/mapper"
 	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/internal/shared/helper"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 	"github.com/1Storm3/flibox-api/pkg/logger"
-	"go.uber.org/zap"
-	"net/http"
-	"time"
 )
 
 type AuthService struct {
@@ -35,7 +35,7 @@ func NewAuthService(
 	}
 }
 
-func (s *AuthService) Login(ctx context.Context, req dto.LoginDTO) (string, error) {
+func (s *AuthService) Login(ctx context.Context, req model.User) (string, error) {
 	user, err := s.userService.GetOneByEmail(ctx, req.Email)
 	if err != nil || !s.userService.CheckPassword(ctx, &user, req.Password) {
 		return "", httperror.New(
@@ -60,7 +60,7 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginDTO) (string, erro
 	return tokenString, nil
 }
 
-func (s *AuthService) Register(ctx context.Context, req dto.RegisterDTO) (bool, error) {
+func (s *AuthService) Register(ctx context.Context, req model.User) (bool, error) {
 	existingUser, err := s.userService.GetOneByEmail(ctx, req.Email)
 	if err == nil && existingUser.ID != "" {
 		return false, httperror.New(
@@ -102,9 +102,9 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterDTO) (bool, 
 		Role:          "user",
 		IsVerified:    false,
 		VerifiedToken: verificationToken,
-		LastActivity:  time.Now().UTC(),
-		CreatedAt:     time.Now().UTC(),
-		UpdatedAt:     time.Now().UTC(),
+		LastActivity:  time.Now().UTC().Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Now().UTC().Format("2006-01-02 15:04:05"),
+		UpdatedAt:     time.Now().UTC().Format("2006-01-02 15:04:05"),
 	}
 
 	createdUser, err := s.userService.Create(ctx, newUser)
@@ -132,9 +132,9 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterDTO) (bool, 
 	return true, nil
 }
 
-func (s *AuthService) Verify(ctx context.Context, tokenDto string) error {
+func (s *AuthService) Verify(ctx context.Context, token string) error {
 	jwtKey := []byte(s.cfg.App.JwtSecretKey)
-	email, err := s.tokenService.ValidateEmailToken(tokenDto, jwtKey)
+	email, err := s.tokenService.ValidateEmailToken(token, jwtKey)
 	if err != nil {
 		return httperror.New(
 			http.StatusBadRequest,
@@ -148,7 +148,7 @@ func (s *AuthService) Verify(ctx context.Context, tokenDto string) error {
 			"Пользователь не найден",
 		)
 	}
-	user := dto.UpdateForVerifyDTO{
+	user := model.User{
 		ID:            userNotVerified.ID,
 		IsVerified:    true,
 		VerifiedToken: nil,
@@ -163,29 +163,28 @@ func (s *AuthService) Verify(ctx context.Context, tokenDto string) error {
 	return nil
 }
 
-func (s *AuthService) Me(ctx context.Context, userId string) (dto.MeResponseDTO, error) {
-
+func (s *AuthService) Me(ctx context.Context, userId string) (model.User, error) {
 	user, err := s.userService.GetOneById(ctx, userId)
 
 	if err != nil {
-		return dto.MeResponseDTO{}, httperror.New(
+		return model.User{}, httperror.New(
 			http.StatusNotFound,
 			"Пользователь не найден",
 		)
 	}
 
-	lastActivity := time.Now().Format(time.RFC3339)
-	_, err = s.userService.Update(ctx, dto.UpdateUserDTO{
+	lastActivity := time.Now().Format("2006-01-02 15:04:05")
+	_, err = s.userService.Update(ctx, model.User{
 		ID:           userId,
-		LastActivity: &lastActivity,
+		LastActivity: lastActivity,
 	})
 
 	if err != nil {
-		return dto.MeResponseDTO{}, httperror.New(
+		return model.User{}, httperror.New(
 			http.StatusInternalServerError,
 			err.Error(),
 		)
 	}
 
-	return mapper.MapModelUserToResponseDTO(user), nil
+	return user, nil
 }

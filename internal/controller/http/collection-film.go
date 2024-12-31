@@ -1,11 +1,14 @@
 package http
 
 import (
+	"net/http"
+	"strconv"
+
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"github.com/gofiber/fiber/v2"
-	"net/http"
 )
 
 type CollectionFilmController struct {
@@ -19,16 +22,16 @@ func NewCollectionFilmController(collectionFilmService controller.CollectionFilm
 }
 
 func (h *CollectionFilmController) Add(c *fiber.Ctx) error {
-	var filmId dto.CreateCollectionFilmDTO
+	var filmRequest dto.CreateCollectionFilmDTO
 	collectionId := c.Params("id")
-	if err := c.BodyParser(&filmId); err != nil {
+	if err := c.BodyParser(&filmRequest); err != nil {
 		return httperror.New(
 			http.StatusBadRequest,
 			err.Error(),
 		)
 	}
 	ctx := c.Context()
-	err := h.collectionFilmService.Add(ctx, collectionId, filmId)
+	err := h.collectionFilmService.Add(ctx, collectionId, strconv.Itoa(filmRequest.FilmID))
 	if err != nil {
 		return httperror.HandleError(c, err)
 	}
@@ -38,16 +41,16 @@ func (h *CollectionFilmController) Add(c *fiber.Ctx) error {
 }
 
 func (h *CollectionFilmController) Delete(c *fiber.Ctx) error {
-	var filmId dto.DeleteCollectionFilmDTO
+	var filmRequest dto.DeleteCollectionFilmDTO
 	collectionId := c.Params("id")
-	if err := c.BodyParser(&filmId); err != nil {
+	if err := c.BodyParser(&filmRequest); err != nil {
 		return httperror.New(
 			http.StatusBadRequest,
 			err.Error(),
 		)
 	}
 	ctx := c.Context()
-	err := h.collectionFilmService.Delete(ctx, collectionId, filmId)
+	err := h.collectionFilmService.Delete(ctx, collectionId, strconv.Itoa(filmRequest.FilmID))
 	if err != nil {
 		return httperror.HandleError(c, err)
 	}

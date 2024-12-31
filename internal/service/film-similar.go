@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/1Storm3/flibox-api/internal/config"
-	"github.com/1Storm3/flibox-api/internal/controller"
-	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 	"io"
 	"net/http"
 	"strconv"
+
+	"github.com/1Storm3/flibox-api/internal/config"
+	"github.com/1Storm3/flibox-api/internal/controller"
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/model"
+	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type FilmsSimilarService struct {
@@ -29,39 +31,41 @@ func NewFilmSimilarService(filmSimilarRepo FilmSimilarRepo, filmService controll
 	}
 }
 
-func (s *FilmsSimilarService) GetAll(ctx context.Context, filmId string) ([]dto.ResponseFilmDTO, error) {
+func (s *FilmsSimilarService) GetAll(ctx context.Context, filmId string) ([]model.FilmSimilar, error) {
 	result, err := s.filmSimilarRepo.GetAll(ctx, filmId)
 
 	if err != nil {
-		return []dto.ResponseFilmDTO{}, err
+		return []model.FilmSimilar{}, err
 	}
 
 	if len(result) > 0 {
-		var similars []dto.ResponseFilmDTO
+		var similars []model.FilmSimilar
 		for _, similar := range result {
-			res, err := s.filmService.GetOne(ctx, strconv.Itoa(similar.SimilarID))
+			res, err := s.filmService.GetOne(ctx, strconv.Itoa(similar.SimilarId))
 
 			if err != nil {
-				return []dto.ResponseFilmDTO{}, err
+				return []model.FilmSimilar{}, err
 			}
-			similars = append(similars, res)
+			similars = append(similars, model.FilmSimilar{
+				Film: res,
+			})
 		}
 		return similars, nil
 	}
 	similars, err := s.FetchSimilar(ctx, filmId)
 	if err != nil {
-		return []dto.ResponseFilmDTO{}, fmt.Errorf("failed to fetch similar from Kinopoisk API: %w", err)
+		return []model.FilmSimilar{}, fmt.Errorf("failed to fetch similar from Kinopoisk API: %w", err)
 	}
 	return similars, nil
 }
 
-func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) ([]dto.ResponseFilmDTO, error) {
+func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) ([]model.FilmSimilar, error) {
 	apikey := s.cfg.DB.ApiKey
 	baseUrlForAllSimilar := fmt.Sprintf(baseUrlForAllSimilar, filmId)
 	req, err := http.NewRequest("GET", baseUrlForAllSimilar, nil)
 
 	if err != nil {
-		return []dto.ResponseFilmDTO{}, httperror.New(
+		return []model.FilmSimilar{}, httperror.New(
 			http.StatusInternalServerError,
 			err.Error(),
 		)
@@ -73,7 +77,7 @@ func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) (
 	resAllSimilars, err := client.Do(req)
 
 	if err != nil {
-		return []dto.ResponseFilmDTO{},
+		return []model.FilmSimilar{},
 			httperror.New(
 				http.StatusInternalServerError,
 				err.Error(),
@@ -87,7 +91,7 @@ func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) (
 	}(resAllSimilars.Body)
 
 	if resAllSimilars.StatusCode != http.StatusOK {
-		return []dto.ResponseFilmDTO{}, httperror.New(
+		return []model.FilmSimilar{}, httperror.New(
 			http.StatusConflict,
 			"Код ответа Kinopoisk API: "+resAllSimilars.Status,
 		)
@@ -95,7 +99,7 @@ func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) (
 	bodyAllSimilars, err := io.ReadAll(resAllSimilars.Body)
 
 	if err != nil {
-		return []dto.ResponseFilmDTO{},
+		return []model.FilmSimilar{},
 			httperror.New(
 				http.StatusInternalServerError,
 				err.Error(),
@@ -117,20 +121,20 @@ func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) (
 	err = json.Unmarshal(bodyAllSimilars, &apiResponse)
 
 	if err != nil {
-		return []dto.ResponseFilmDTO{},
+		return []model.FilmSimilar{},
 			httperror.New(
 				http.StatusInternalServerError,
 				err.Error(),
 			)
 	}
-	var similars []dto.ResponseFilmDTO
+	var similars []model.FilmSimilar
 	for _, similar := range apiResponse.Items {
 		filmIsExist, err := s.filmService.GetOne(ctx, strconv.Itoa(similar.FilmId))
 
 		filmIdInt, err := strconv.Atoi(filmId)
 
 		if err != nil {
-			return []dto.ResponseFilmDTO{},
+			return []model.FilmSimilar{},
 				httperror.New(
 					http.StatusInternalServerError,
 					err.Error(),
@@ -142,7 +146,9 @@ func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) (
 			return nil, err
 		}
 
-		similars = append(similars, filmIsExist)
+		similars = append(similars, model.FilmSimilar{
+			Film: filmIsExist,
+		})
 	}
 	return similars, nil
 }
