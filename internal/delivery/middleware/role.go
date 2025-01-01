@@ -2,9 +2,7 @@ package middleware
 
 import (
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"net/http"
-
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -18,9 +16,6 @@ func RoleMiddleware(allowedRoles ...string) fiber.Handler {
 				return c.Next()
 			}
 		}
-		return httperror.New(
-			http.StatusForbidden,
-			"Недостаточно прав для выполнения операции",
-		)
+		return sys.NewError(sys.ErrAccessDenied, "Недостаточно прав")
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/mapper"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type FilmController struct {
@@ -34,7 +34,7 @@ func (h *FilmController) Search(c *fiber.Ctx) error {
 	films, totalRecords, err := h.filmService.Search(ctx, match, genres, page, pageSize)
 
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 	totalPages := (totalRecords + int64(pageSize) - 1) / int64(pageSize)
 
@@ -58,7 +58,7 @@ func (h *FilmController) GetOneByID(c *fiber.Ctx) error {
 	film, err := h.filmService.GetOne(ctx, filmId)
 
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(mapper.MapModelFilmToResponseDTO(film))

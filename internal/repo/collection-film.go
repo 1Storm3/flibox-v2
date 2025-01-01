@@ -2,16 +2,9 @@ package repo
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"net/http"
-	"strings"
-
-	"gorm.io/gorm"
 
 	"github.com/1Storm3/flibox-api/database/postgres"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type CollectionFilmRepo struct {
@@ -70,16 +63,7 @@ func (c *CollectionFilmRepo) Add(
 		First(&collection).Error
 
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return httperror.New(
-				http.StatusNotFound,
-				"Коллекция не найдена",
-			)
-		}
-		return httperror.New(
-			http.StatusInternalServerError,
-			fmt.Sprintf("Ошибка при получении коллекции: %v", err),
-		)
+		return err
 	}
 
 	newCollectionFilm := &dto.CollectionFilmRepoDTO{
@@ -89,22 +73,7 @@ func (c *CollectionFilmRepo) Add(
 	err = c.storage.DB().WithContext(ctx).Table("collection_films").Create(newCollectionFilm).Error
 
 	if err != nil {
-		if strings.Contains(err.Error(), "violates unique constraint") {
-			return httperror.New(
-				http.StatusConflict,
-				"Фильм уже добавлен в коллекцию",
-			)
-		}
-		if strings.Contains(err.Error(), "collection_films_film_id_fkey") {
-			return httperror.New(
-				http.StatusNotFound,
-				"Фильм не найден",
-			)
-		}
-		return httperror.New(
-			http.StatusInternalServerError,
-			fmt.Sprintf("Ошибка при добавлении фильма в коллекцию: %v", err),
-		)
+		return err
 	}
 
 	return nil
@@ -117,10 +86,7 @@ func (c *CollectionFilmRepo) Delete(ctx context.Context, collectionId string, fi
 		Delete(&dto.CollectionRepoDTO{}).Error
 
 	if err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return err
 	}
 
 	return nil

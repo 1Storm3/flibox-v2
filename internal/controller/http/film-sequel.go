@@ -6,7 +6,7 @@ import (
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/mapper"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type FilmSequelController struct {
@@ -24,7 +24,7 @@ func (h *FilmSequelController) GetAll(c *fiber.Ctx) error {
 	ctx := c.Context()
 	sequels, err := h.filmSequelService.GetAll(ctx, filmId)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 	var sequelsDTO []dto.ResponseFilmDTO
 	for _, sequel := range sequels {

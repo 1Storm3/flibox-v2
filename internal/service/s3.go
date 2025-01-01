@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -13,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	appConfig "github.com/1Storm3/flibox-api/internal/config"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type S3Service struct {
@@ -31,10 +30,7 @@ func NewS3Service(appCfg *appConfig.Config) (*S3Service, error) {
 		)),
 	)
 	if err != nil {
-		return nil, httperror.New(
-			http.StatusInternalServerError,
-			"Не удалось загрузить конфигурацию для AWS SDK",
-		)
+		return nil, sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	client := s3.NewFromConfig(awsConfig, func(o *s3.Options) {
@@ -46,10 +42,7 @@ func NewS3Service(appCfg *appConfig.Config) (*S3Service, error) {
 		Bucket: aws.String(appCfg.S3.Bucket),
 	})
 	if err != nil {
-		return nil, httperror.New(
-			http.StatusInternalServerError,
-			"Не удалось подключиться к S3: "+err.Error(),
-		)
+		return nil, sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	return &S3Service{client: client, appCfg: appCfg}, nil
@@ -57,7 +50,7 @@ func NewS3Service(appCfg *appConfig.Config) (*S3Service, error) {
 
 func (s *S3Service) UploadFile(ctx context.Context, key string, file []byte) (string, error) {
 	if s.client == nil {
-		return "", httperror.New(http.StatusInternalServerError, "S3 не инициализирован")
+		return "", sys.NewError(sys.ErrUnknown, "S3 не инициализирован")
 	}
 
 	input := &s3.PutObjectInput{
@@ -70,10 +63,7 @@ func (s *S3Service) UploadFile(ctx context.Context, key string, file []byte) (st
 
 	_, err := s.client.PutObject(ctx, input)
 	if err != nil {
-		return "", httperror.New(
-			http.StatusInternalServerError,
-			"Не удалось загрузить файл: "+err.Error(),
-		)
+		return "", sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	url := fmt.Sprintf("%s/%s", s.appCfg.S3.Domain, key)
@@ -82,7 +72,7 @@ func (s *S3Service) UploadFile(ctx context.Context, key string, file []byte) (st
 
 func (s *S3Service) DeleteFile(ctx context.Context, key string) error {
 	if s.client == nil {
-		return httperror.New(http.StatusInternalServerError, "S3 не инициализирован")
+		return sys.NewError(sys.ErrUnknown, "S3 не инициализирован")
 	}
 
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
@@ -90,10 +80,7 @@ func (s *S3Service) DeleteFile(ctx context.Context, key string) error {
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			"Не удалось удалить файл: "+err.Error(),
-		)
+		return sys.NewError(sys.ErrUnknown, err.Error())
 	}
 	return nil
 }

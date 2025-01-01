@@ -3,12 +3,13 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+
 	"io"
 	"net/http"
 
 	"github.com/1Storm3/flibox-api/internal/config"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 const baseUrlForAllFilms = "https://kinopoiskapiunofficial.tech/api/v2.2/films/"
@@ -29,10 +30,7 @@ func (s *ExternalService) SetExternalRequest(filmId string) (dto.GetExternalFilm
 	req, err := http.NewRequest("GET", urlAllFilms, nil)
 	if err != nil {
 		return dto.GetExternalFilmDTO{},
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+			sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	req.Header.Add("X-API-KEY", apiKey)
@@ -41,10 +39,7 @@ func (s *ExternalService) SetExternalRequest(filmId string) (dto.GetExternalFilm
 	resAllFilms, err := client.Do(req)
 	if err != nil {
 		return dto.GetExternalFilmDTO{},
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+			sys.NewError(sys.ErrUnknown, err.Error())
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -54,34 +49,25 @@ func (s *ExternalService) SetExternalRequest(filmId string) (dto.GetExternalFilm
 	}(resAllFilms.Body)
 
 	if resAllFilms.StatusCode == http.StatusNotFound {
-		return dto.GetExternalFilmDTO{}, httperror.New(http.StatusNotFound, "Фильм не найден")
+		return dto.GetExternalFilmDTO{}, sys.NewError(sys.ErrUnknown, "Фильм не найден в внешнем сервисе")
 	}
 
 	if resAllFilms.StatusCode != http.StatusOK {
 		return dto.GetExternalFilmDTO{},
-			httperror.New(
-				http.StatusInternalServerError,
-				"Не удалось получить данные о фильме c внешнего апи"+resAllFilms.Status,
-			)
+			sys.NewError(sys.ErrUnknown, "Фильм не найден в внешнем сервисе")
 	}
 
 	bodyAllFilms, err := io.ReadAll(resAllFilms.Body)
 	if err != nil {
 		return dto.GetExternalFilmDTO{},
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+			sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	var externalFilm dto.GetExternalFilmDTO
 	err = json.Unmarshal(bodyAllFilms, &externalFilm)
 	if err != nil {
 		return dto.GetExternalFilmDTO{},
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+			sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	return externalFilm, nil

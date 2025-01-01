@@ -1,14 +1,13 @@
 package service
 
 import (
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
 
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type EmailClaims struct {
@@ -35,11 +34,7 @@ func (s *TokenService) GenerateToken(jwtKey []byte, userID, role string, duratio
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
-		return "",
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+		return "", err
 	}
 	return tokenString, nil
 }
@@ -56,10 +51,7 @@ func (s *TokenService) GenerateEmailToken(email string, jwtKey []byte, duration 
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
 		return nil,
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+			sys.NewError(sys.ErrUnknown, err.Error())
 	}
 	return &tokenString, nil
 }
@@ -70,10 +62,7 @@ func (s *TokenService) ValidateEmailToken(tokenString string, jwtKey []byte) (st
 		return jwtKey, nil
 	})
 	if err != nil || !token.Valid {
-		return "", httperror.New(
-			http.StatusUnauthorized,
-			"Недействительный токен",
-		)
+		return "", sys.NewError(sys.ErrInvalidToken, "")
 	}
 	return claims.Email, nil
 }
@@ -85,10 +74,7 @@ func (s *TokenService) ParseToken(tokenString string, jwtKey []byte) (*dto.Claim
 		return jwtKey, nil
 	})
 	if err != nil || !token.Valid {
-		return nil, httperror.New(
-			http.StatusUnauthorized,
-			"Недействительный токен",
-		)
+		return nil, sys.NewError(sys.ErrInvalidToken, "")
 	}
 	return claims, nil
 }

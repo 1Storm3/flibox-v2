@@ -2,13 +2,13 @@ package http
 
 import (
 	"github.com/1Storm3/flibox-api/internal/mapper"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type AuthController struct {
@@ -38,7 +38,7 @@ func (a *AuthController) Login(c *fiber.Ctx) error {
 	tokenUser, err := a.authService.Login(ctx, user)
 
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -61,7 +61,7 @@ func (a *AuthController) Register(c *fiber.Ctx) error {
 
 	result, err := a.authService.Register(ctx, user)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -72,7 +72,7 @@ func (a *AuthController) Register(c *fiber.Ctx) error {
 func (a *AuthController) Verify(c *fiber.Ctx) error {
 	tokenUser := c.Params("token")
 	if err := a.authService.Verify(c.Context(), tokenUser); err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -94,7 +94,7 @@ func (a *AuthController) Me(c *fiber.Ctx) error {
 	result, err := a.authService.Me(ctx, claims.UserID)
 
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(result)

@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
-	"net/http"
 	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
 	"github.com/1Storm3/flibox-api/internal/controller"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type ExternalController struct {
@@ -30,17 +29,11 @@ func (e *ExternalController) UploadFile(c *fiber.Ctx) error {
 	ctx := c.Context()
 	file, err := c.FormFile("file")
 	if err != nil {
-		return httperror.New(
-			http.StatusBadRequest,
-			"Не удалось получить данные",
-		)
+		return sys.NewError(sys.ErrUnknown, err.Error())
 	}
 	fileReader, err := file.Open()
 	if err != nil {
-		return httperror.New(
-			http.StatusBadRequest,
-			"Не удалось получить данные",
-		)
+		return sys.NewError(sys.ErrUnknown, err.Error())
 	}
 	defer func(fileReader multipart.File) {
 		err := fileReader.Close()
@@ -51,26 +44,20 @@ func (e *ExternalController) UploadFile(c *fiber.Ctx) error {
 
 	fileBytes, err := io.ReadAll(fileReader)
 	if err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			"Не удалось прочитать файл",
-		)
+		return sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	ext := filepath.Ext(file.Filename)
 	uniqueID, err := uuid.NewUUID()
 	if err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			"Не удалось создать уникальный идентификатор",
-		)
+		return sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	uniqueFilename := fmt.Sprintf("%s%s", uniqueID.String(), ext)
 
 	url, err := e.s3Service.UploadFile(ctx, uniqueFilename, fileBytes)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{

@@ -1,7 +1,6 @@
 package http
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,7 +8,7 @@ import (
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/mapper"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type CommentController struct {
@@ -29,7 +28,7 @@ func (h *CommentController) GetAllByFilmID(c *fiber.Ctx) error {
 	ctx := c.Context()
 	comments, totalRecords, err := h.commentService.GetAllByFilmId(ctx, filmID, page, pageSize)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	totalPages := (totalRecords + int64(pageSize) - 1) / int64(pageSize)
@@ -54,14 +53,11 @@ func (h *CommentController) Create(c *fiber.Ctx) error {
 	ctx := c.Context()
 	var comment dto.CreateCommentDTO
 	if err := c.BodyParser(&comment); err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return sys.NewError(sys.ErrInvalidRequestData, err.Error())
 	}
 
 	if len(strings.TrimSpace(*comment.Content)) == 0 {
-		return httperror.New(http.StatusBadRequest, "Комментарий не может быть пустым")
+		return sys.NewError(sys.ErrInvalidRequestData, "Комментарий не может быть пустым")
 	}
 
 	comment.UserID = userId
@@ -71,7 +67,7 @@ func (h *CommentController) Create(c *fiber.Ctx) error {
 	result, err := h.commentService.Create(ctx, commentModel)
 
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -88,21 +84,15 @@ func (h *CommentController) Update(c *fiber.Ctx) error {
 	ctx := c.Context()
 	comment, err := h.commentService.GetOne(ctx, commentId)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	if role != "admin" && comment.User.ID != userId {
-		return httperror.New(
-			http.StatusForbidden,
-			"Недостаточно прав для редактирования комментария",
-		)
+		return sys.NewError(sys.ErrAccessDenied, "")
 	}
 	var commentDto dto.UpdateCommentDTO
 	if err := c.BodyParser(&commentDto); err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return sys.NewError(sys.ErrInvalidRequestData, err.Error())
 	}
 	commentDto.ID = commentId
 
@@ -111,7 +101,7 @@ func (h *CommentController) Update(c *fiber.Ctx) error {
 	result, err := h.commentService.Update(ctx, commentModel, commentId)
 
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 	return c.JSON(fiber.Map{
 		"data": mapper.MapCommentModelToCommentResponseDTO(result),
@@ -125,18 +115,15 @@ func (h *CommentController) Delete(c *fiber.Ctx) error {
 	ctx := c.Context()
 	comment, err := h.commentService.GetOne(ctx, commentId)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	if role != "admin" && comment.User.ID != userId {
-		return httperror.New(
-			http.StatusForbidden,
-			"Недостаточно прав для удаления комментария",
-		)
+		return sys.NewError(sys.ErrAccessDenied, "")
 	}
 	err = h.commentService.Delete(ctx, commentId)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 	return c.JSON(fiber.Map{
 		"data": "Комментарий удален",

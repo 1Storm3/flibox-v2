@@ -6,7 +6,7 @@ import (
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/mapper"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type FilmSimilarController struct {
@@ -24,7 +24,7 @@ func (h *FilmSimilarController) GetAll(c *fiber.Ctx) error {
 	ctx := c.Context()
 	similars, err := h.service.GetAll(ctx, filmId)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 	var similarsDTO []dto.ResponseFilmDTO
 	for _, similar := range similars {

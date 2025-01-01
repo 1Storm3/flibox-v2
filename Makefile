@@ -35,11 +35,15 @@ swagger:
 test:
 	go test -v ./...
 
-testauth:
-	go test -cover -coverprofile=coverage.out ./internal/modules/auth
+testService:
+	go test -cover -coverprofile=coverage.out ./internal/service
 
 testTool:
 	go tool cover -func=coverage.out
 
 testHtml:
 	go tool cover -html=coverage.out
+
+mock:
+	mockery --config .mockery.yaml
+

@@ -2,16 +2,15 @@ package http
 
 import (
 	"context"
-	"errors"
-	"github.com/1Storm3/flibox-api/pkg/kafka"
-	"github.com/1Storm3/flibox-api/pkg/logger"
-	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/internal/shared/helper"
+	"github.com/1Storm3/flibox-api/pkg/kafka"
+	"github.com/1Storm3/flibox-api/pkg/logger"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type UserFilmController struct {
@@ -43,14 +42,14 @@ func (g *UserFilmController) GetAll(c *fiber.Ctx) error {
 
 	films, err := g.userFilmService.GetAll(ctx, userID, dto.TypeUserFilm(typeUserFilm), 20)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(films)
 }
 
 func (g *UserFilmController) Add(c *fiber.Ctx) error {
-	userID, filmID, typeUserFilm, err := extractUserFilmParams(c)
+	userID, filmID, typeUserFilm, err := helper.ExtractUserFilmParams(c)
 	if err != nil {
 		return err
 	}
@@ -66,7 +65,7 @@ func (g *UserFilmController) Add(c *fiber.Ctx) error {
 		Type:   typeUserFilm,
 	})
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	if typeUserFilm == dto.TypeUserFavourite {
@@ -98,7 +97,7 @@ func (g *UserFilmController) Add(c *fiber.Ctx) error {
 }
 
 func (g *UserFilmController) Delete(c *fiber.Ctx) error {
-	userID, filmID, typeUserFilm, err := extractUserFilmParams(c)
+	userID, filmID, typeUserFilm, err := helper.ExtractUserFilmParams(c)
 	if err != nil {
 		return err
 	}
@@ -110,26 +109,12 @@ func (g *UserFilmController) Delete(c *fiber.Ctx) error {
 		Type:   typeUserFilm,
 	})
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
 		"data": "Фильм удален из избранного",
 	})
-}
-
-func extractUserFilmParams(c *fiber.Ctx) (userID, filmID string, typeUserFilm dto.TypeUserFilm, err error) {
-	userID = c.Locals("userClaims").(*dto.Claims).UserID
-	filmID = c.Params("filmId")
-
-	typeUserFilmReq := c.Query("type")
-	if err := ParseTypeUserFilm(typeUserFilmReq, &typeUserFilm); err != nil {
-		return "", "", "", httperror.New(
-			http.StatusBadRequest,
-			"Недопустимый тип фильма: "+typeUserFilmReq,
-		)
-	}
-	return userID, filmID, typeUserFilm, nil
 }
 
 func (g *UserFilmController) checkFilmExistence(ctx context.Context, filmID string) error {
@@ -138,22 +123,7 @@ func (g *UserFilmController) checkFilmExistence(ctx context.Context, filmID stri
 		return err
 	}
 	if isExist.Description == nil {
-		return httperror.New(
-			http.StatusNotFound,
-			"Фильм не найден",
-		)
-	}
-	return nil
-}
-
-func ParseTypeUserFilm(s string, t *dto.TypeUserFilm) error {
-	switch s {
-	case string(dto.TypeUserFavourite):
-		*t = dto.TypeUserFavourite
-	case string(dto.TypeUserRecommend):
-		*t = dto.TypeUserRecommend
-	default:
-		return errors.New("Неверный тип фильма: " + s)
+		return sys.NewError(sys.ErrFilmNotFound, "")
 	}
 	return nil
 }

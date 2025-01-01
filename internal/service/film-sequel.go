@@ -3,16 +3,19 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
+	"gorm.io/gorm"
+
 	"github.com/1Storm3/flibox-api/internal/config"
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/model"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type FilmSequelService struct {
@@ -35,7 +38,10 @@ func (s *FilmSequelService) GetAll(ctx context.Context, filmId string) ([]model.
 	result, err := s.filmSequelRepo.GetAll(ctx, filmId)
 
 	if err != nil {
-		return []model.FilmSequel{}, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []model.FilmSequel{}, nil
+		}
+		return []model.FilmSequel{}, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 	}
 	if len(result) > 0 {
 		var sequels []model.FilmSequel
@@ -67,10 +73,7 @@ func (s *FilmSequelService) FetchSequels(ctx context.Context, filmId string) ([]
 	req, err := http.NewRequest("GET", baseUrlForAllSequels, nil)
 
 	if err != nil {
-		return []model.FilmSequel{}, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return []model.FilmSequel{}, sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	req.Header.Add("X-API-KEY", apiKey)
@@ -79,10 +82,7 @@ func (s *FilmSequelService) FetchSequels(ctx context.Context, filmId string) ([]
 	resAllSequels, err := client.Do(req)
 	if err != nil {
 		return []model.FilmSequel{},
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+			sys.NewError(sys.ErrUnknown, err.Error())
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -92,24 +92,24 @@ func (s *FilmSequelService) FetchSequels(ctx context.Context, filmId string) ([]
 	}(resAllSequels.Body)
 
 	if resAllSequels.StatusCode != http.StatusOK {
-		return []model.FilmSequel{}, httperror.New(
-			http.StatusNotFound,
-			"Сиквелы не найдены",
-		)
+		return []model.FilmSequel{}, sys.NewError(sys.ErrUnknown, "Сиквелы не найдены")
 	}
 
 	bodyAllSequels, err := io.ReadAll(resAllSequels.Body)
 	if err != nil {
 		return []model.FilmSequel{},
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+			sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	var externalSequels []dto.GetExternalSequelResponseDTO
 
 	err = json.Unmarshal(bodyAllSequels, &externalSequels)
+
+	if err != nil {
+		return []model.FilmSequel{},
+			sys.NewError(sys.ErrUnknown, err.Error())
+	}
+
 	var sequels []model.FilmSequel
 	for _, sequel := range externalSequels {
 		filmExist, err := s.filmService.GetOne(ctx, strconv.Itoa(sequel.FilmId))
@@ -122,15 +122,12 @@ func (s *FilmSequelService) FetchSequels(ctx context.Context, filmId string) ([]
 
 		if err != nil {
 			return []model.FilmSequel{},
-				httperror.New(
-					http.StatusInternalServerError,
-					err.Error(),
-				)
+				sys.NewError(sys.ErrUnknown, err.Error())
 		}
 
 		err = s.filmSequelRepo.Save(ctx, filmIdInt, sequel.FilmId)
 		if err != nil {
-			return nil, err
+			return nil, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 		}
 
 		sequels = append(sequels, model.FilmSequel{
@@ -138,12 +135,5 @@ func (s *FilmSequelService) FetchSequels(ctx context.Context, filmId string) ([]
 		})
 	}
 
-	if err != nil {
-		return []model.FilmSequel{},
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
-	}
 	return sequels, nil
 }

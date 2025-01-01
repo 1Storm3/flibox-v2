@@ -2,15 +2,11 @@ package repo
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"github.com/lib/pq"
-	"gorm.io/gorm"
 
 	"github.com/1Storm3/flibox-api/database/postgres"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type FilmRepo struct {
@@ -26,20 +22,14 @@ func NewFilmRepo(storage *postgres.Storage) *FilmRepo {
 func (f *FilmRepo) GetOneByNameRu(ctx context.Context, nameRu string) (dto.FilmRepoDTO, error) {
 	var film dto.FilmRepoDTO
 
-	result := f.storage.DB().
+	err := f.storage.DB().
 		WithContext(ctx).
 		Table("films").
 		Where("name_ru ILIKE ?", "%"+nameRu+"%").
-		First(&film)
+		First(&film).Error
 
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return dto.FilmRepoDTO{}, nil
-	} else if result.Error != nil {
-		return dto.FilmRepoDTO{},
-			httperror.New(
-				http.StatusInternalServerError,
-				result.Error.Error(),
-			)
+	if err != nil {
+		return dto.FilmRepoDTO{}, err
 	}
 
 	return film, nil
@@ -48,27 +38,20 @@ func (f *FilmRepo) GetOneByNameRu(ctx context.Context, nameRu string) (dto.FilmR
 func (f *FilmRepo) GetOne(ctx context.Context, filmID string) (dto.FilmRepoDTO, error) {
 	var film dto.FilmRepoDTO
 
-	result := f.storage.DB().WithContext(ctx).Table("films").Where("id = ?", filmID).First(&film)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return dto.FilmRepoDTO{}, nil
-	} else if result.Error != nil {
-		return dto.FilmRepoDTO{},
-			httperror.New(
-				http.StatusInternalServerError,
-				result.Error.Error())
+	err := f.storage.DB().WithContext(ctx).Table("films").Where("id = ?", filmID).First(&film).Error
+
+	if err != nil {
+		return dto.FilmRepoDTO{}, err
 	}
 
 	return film, nil
 }
 
 func (f *FilmRepo) Save(ctx context.Context, film dto.FilmRepoDTO) error {
-	result := f.storage.DB().WithContext(ctx).Table("films").Create(&film)
+	err := f.storage.DB().WithContext(ctx).Table("films").Create(&film).Error
 
-	if result.Error != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			result.Error.Error(),
-		)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -95,10 +78,7 @@ func (f *FilmRepo) Search(
 
 	err := query.Count(&totalRecords).Error
 	if err != nil {
-		return nil, 0, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return nil, 0, err
 	}
 
 	err = query.
@@ -107,10 +87,7 @@ func (f *FilmRepo) Search(
 		Find(&films).Error
 
 	if err != nil {
-		return nil, 0, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return nil, 0, err
 	}
 
 	return films, totalRecords, nil

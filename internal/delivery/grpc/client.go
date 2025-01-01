@@ -3,14 +3,14 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
-	"github.com/1Storm3/flibox-api/internal/config"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"github.com/1Storm3/flibox-api/pkg/proto/gengrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/1Storm3/flibox-api/internal/config"
+	"github.com/1Storm3/flibox-api/pkg/proto/gengrpc"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type ClientConnInterface interface {
@@ -25,10 +25,7 @@ type ClientConn struct {
 func NewClient(config *config.Config) (*ClientConn, error) {
 	conn, err := grpc.NewClient(config.App.GrpcServer, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return nil, httperror.New(
-			http.StatusInternalServerError,
-			fmt.Sprintf("Не удалось подключиться к серверу: %v", err),
-		)
+		return nil, sys.NewError(sys.ErrGRPCConnection, fmt.Sprintf("grpc connection error: %s", err.Error()))
 	}
 
 	client := gengrpc.NewRecommendationUseCaseClient(conn)
@@ -49,10 +46,7 @@ func (c *ClientConn) GetRecommendations(ctx context.Context, films []*gengrpc.Fi
 
 	response, err := c.client.GetRecommendations(ctx, request)
 	if err != nil {
-		return nil, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return nil, sys.NewError(sys.ErrGRPCConnection, fmt.Sprintf("grpc connection error: %s", err.Error()))
 	}
 
 	return response.Films, nil

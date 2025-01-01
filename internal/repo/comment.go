@@ -2,15 +2,11 @@ package repo
 
 import (
 	"context"
-	"errors"
-	"net/http"
-	"strings"
 
 	"gorm.io/gorm"
 
 	"github.com/1Storm3/flibox-api/database/postgres"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type CommentRepo struct {
@@ -27,16 +23,7 @@ func (c *CommentRepo) Create(ctx context.Context, comment dto.CommentRepoDTO) (d
 	result := c.storage.DB().WithContext(ctx).Table("comments").Create(&comment)
 
 	if result.Error != nil {
-		if strings.Contains(result.Error.Error(), "violates foreign key") {
-			return dto.CommentRepoDTO{}, httperror.New(
-				http.StatusConflict,
-				"Родительского комментария не существует с таким ID",
-			)
-		}
-		return dto.CommentRepoDTO{}, httperror.New(
-			http.StatusInternalServerError,
-			result.Error.Error(),
-		)
+		return dto.CommentRepoDTO{}, result.Error
 	}
 
 	err := c.storage.DB().WithContext(ctx).Table("comments").
@@ -45,10 +32,7 @@ func (c *CommentRepo) Create(ctx context.Context, comment dto.CommentRepoDTO) (d
 		}).
 		First(&comment, "id = ?", comment.ID).Error
 	if err != nil {
-		return dto.CommentRepoDTO{}, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return dto.CommentRepoDTO{}, err
 	}
 
 	return comment, nil
@@ -63,10 +47,7 @@ func (c *CommentRepo) GetCountByParentId(ctx context.Context, parentId string) (
 		Count(&count).Error
 
 	if err != nil {
-		return 0, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return 0, err
 	}
 
 	return count, nil
@@ -80,16 +61,8 @@ func (c *CommentRepo) GetOne(ctx context.Context, commentID string) (dto.Comment
 			return db.Table("users")
 		}).
 		Table("comments").First(&comment).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return dto.CommentRepoDTO{}, httperror.New(
-			http.StatusNotFound,
-			"Комментарий не найден",
-		)
-	} else if err != nil {
-		return dto.CommentRepoDTO{}, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+	if err != nil {
+		return dto.CommentRepoDTO{}, err
 	}
 
 	return comment, nil
@@ -103,10 +76,7 @@ func (c *CommentRepo) Delete(ctx context.Context, commentID string) error {
 		Error
 
 	if err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return err
 	}
 	return nil
 }
@@ -119,10 +89,7 @@ func (c *CommentRepo) GetAllByFilmId(ctx context.Context, filmID string, page, p
 
 	err := c.storage.DB().WithContext(ctx).Table("comments").Model(&dto.CommentRepoDTO{}).Where("film_id = ?", filmID).Count(&totalRecords).Error
 	if err != nil {
-		return []dto.CommentRepoDTO{}, 0, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return []dto.CommentRepoDTO{}, 0, err
 	}
 
 	err = c.storage.DB().WithContext(ctx).
@@ -136,13 +103,8 @@ func (c *CommentRepo) GetAllByFilmId(ctx context.Context, filmID string, page, p
 		Table("comments").
 		Find(&comments).Error
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return []dto.CommentRepoDTO{}, 0, nil
-	} else if err != nil {
-		return []dto.CommentRepoDTO{}, 0, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+	if err != nil {
+		return []dto.CommentRepoDTO{}, 0, err
 	}
 
 	return comments, totalRecords, nil
@@ -153,12 +115,12 @@ func (c *CommentRepo) Update(ctx context.Context, commentDTO dto.CommentRepoDTO,
 	if commentDTO.Content == nil {
 		err := c.storage.DB().WithContext(ctx).Table("comments").Model(&comment).Where("id = ?", commentID).Update("content", nil).Error
 		if err != nil {
-			return dto.CommentRepoDTO{}, httperror.New(http.StatusInternalServerError, err.Error())
+			return dto.CommentRepoDTO{}, err
 		}
 	} else {
 		err := c.storage.DB().WithContext(ctx).Table("comments").Model(&comment).Where("id = ?", commentID).Updates(commentDTO).Error
 		if err != nil {
-			return dto.CommentRepoDTO{}, httperror.New(http.StatusInternalServerError, err.Error())
+			return dto.CommentRepoDTO{}, err
 		}
 	}
 	err := c.storage.DB().WithContext(ctx).
@@ -167,10 +129,7 @@ func (c *CommentRepo) Update(ctx context.Context, commentDTO dto.CommentRepoDTO,
 		}).
 		Table("comments").First(&comment, "id = ?", commentID).Error
 	if err != nil {
-		return dto.CommentRepoDTO{}, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return dto.CommentRepoDTO{}, err
 	}
 
 	return comment, nil

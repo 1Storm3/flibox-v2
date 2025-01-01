@@ -1,14 +1,12 @@
 package http
 
 import (
-	"net/http"
-
+	"github.com/1Storm3/flibox-api/pkg/sys"
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/mapper"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type CollectionController struct {
@@ -26,10 +24,7 @@ func (h *CollectionController) Update(c *fiber.Ctx) error {
 	ctx := c.Context()
 	var collectionDto dto.UpdateCollectionDTO
 	if err := c.BodyParser(&collectionDto); err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return sys.NewError(sys.ErrInvalidRequestData, err.Error())
 	}
 	collectionDto.ID = collectionId
 
@@ -38,7 +33,7 @@ func (h *CollectionController) Update(c *fiber.Ctx) error {
 	result, err := h.collectionService.Update(ctx, collection)
 
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -54,7 +49,7 @@ func (h *CollectionController) Delete(c *fiber.Ctx) error {
 	err := h.collectionService.Delete(ctx, collectionId)
 
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -69,7 +64,7 @@ func (h *CollectionController) GetAllMy(c *fiber.Ctx) error {
 	ctx := c.Context()
 	result, totalRecords, err := h.collectionService.GetAllMy(ctx, page, pageSize, userId)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 	totalPages := (totalRecords + int64(pageSize) - 1) / int64(pageSize)
 
@@ -94,7 +89,7 @@ func (h *CollectionController) GetAll(c *fiber.Ctx) error {
 	ctx := c.Context()
 	result, totalRecords, err := h.collectionService.GetAll(ctx, page, pageSize)
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 	totalPages := (totalRecords + int64(pageSize) - 1) / int64(pageSize)
 
@@ -121,7 +116,7 @@ func (h *CollectionController) GetOne(c *fiber.Ctx) error {
 	result, err := h.collectionService.GetOne(ctx, collectionId)
 
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 	return c.JSON(fiber.Map{
 		"data": mapper.MapModelCollectionToResponseDTO(result),
@@ -134,10 +129,7 @@ func (h *CollectionController) Create(c *fiber.Ctx) error {
 	ctx := c.Context()
 	var collectionDto dto.CreateCollectionDTO
 	if err := c.BodyParser(&collectionDto); err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return sys.NewError(sys.ErrInvalidRequestData, err.Error())
 	}
 
 	collection := mapper.MapCreateCollectionDTOToCollectionModel(collectionDto)
@@ -145,7 +137,7 @@ func (h *CollectionController) Create(c *fiber.Ctx) error {
 	result, err := h.collectionService.Create(ctx, collection, userId)
 
 	if err != nil {
-		return httperror.HandleError(c, err)
+		return sys.HandleError(c, err)
 	}
 
 	return c.JSON(fiber.Map{

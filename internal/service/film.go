@@ -2,9 +2,14 @@ package service
 
 import (
 	"context"
+	"errors"
+
+	"gorm.io/gorm"
+
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/mapper"
 	"github.com/1Storm3/flibox-api/internal/model"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type FilmService struct {
@@ -22,7 +27,10 @@ func NewFilmService(filmRepo FilmRepo, externalService controller.ExternalServic
 func (f *FilmService) GetOne(ctx context.Context, filmId string) (model.Film, error) {
 	result, err := f.filmRepo.GetOne(ctx, filmId)
 	if err != nil {
-		return model.Film{}, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return model.Film{}, nil
+		}
+		return model.Film{}, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 	}
 
 	if result.ID == nil {
@@ -38,7 +46,7 @@ func (f *FilmService) GetOne(ctx context.Context, filmId string) (model.Film, er
 		film := mapper.MapExternalFilmDTOToFilmRepoDTO(externalFilm)
 
 		if err := f.filmRepo.Save(ctx, film); err != nil {
-			return model.Film{}, err
+			return model.Film{}, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 		}
 
 		filmDTO := mapper.MapFilmRepoDTOToFilmModel(film)
@@ -55,7 +63,7 @@ func (f *FilmService) Search(ctx context.Context, match string, genres []string,
 	films, totalRecords, err := f.filmRepo.Search(ctx, match, genres, page, pageSize)
 
 	if err != nil {
-		return []model.Film{}, 0, err
+		return []model.Film{}, 0, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 	}
 
 	var filmsDTO []model.Film
@@ -69,7 +77,10 @@ func (f *FilmService) Search(ctx context.Context, match string, genres []string,
 func (f *FilmService) GetOneByNameRu(ctx context.Context, nameRu string) (model.Film, error) {
 	result, err := f.filmRepo.GetOneByNameRu(ctx, nameRu)
 	if err != nil {
-		return model.Film{}, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return model.Film{}, nil
+		}
+		return model.Film{}, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 	}
 	return mapper.MapFilmRepoDTOToFilmModel(result), nil
 }

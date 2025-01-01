@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"net/http"
+
 	"time"
 
 	"go.uber.org/zap"
@@ -11,8 +11,8 @@ import (
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/internal/shared/helper"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 	"github.com/1Storm3/flibox-api/pkg/logger"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type AuthService struct {
@@ -38,24 +38,16 @@ func NewAuthService(
 func (s *AuthService) Login(ctx context.Context, req model.User) (string, error) {
 	user, err := s.userService.GetOneByEmail(ctx, req.Email)
 	if err != nil || !s.userService.CheckPassword(ctx, &user, req.Password) {
-		return "", httperror.New(
-			http.StatusUnauthorized,
-			"Неверный логин или пароль",
-		)
+		return "", sys.NewError(sys.ErrInvalidCredentials, "")
 	}
 	jwtKey := []byte(s.cfg.App.JwtSecretKey)
 	expiresIn, err := time.ParseDuration(s.cfg.App.JwtExpiresIn)
 	if err != nil {
-		return "", httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return "", sys.NewError(sys.ErrTokenGeneration, err.Error())
 	}
 	tokenString, err := s.tokenService.GenerateToken(jwtKey, user.ID, user.Role, expiresIn)
 	if err != nil {
-		return "", httperror.New(
-			http.StatusInternalServerError, err.Error(),
-		)
+		return "", sys.NewError(sys.ErrTokenGeneration, err.Error())
 	}
 	return tokenString, nil
 }
@@ -63,34 +55,22 @@ func (s *AuthService) Login(ctx context.Context, req model.User) (string, error)
 func (s *AuthService) Register(ctx context.Context, req model.User) (bool, error) {
 	existingUser, err := s.userService.GetOneByEmail(ctx, req.Email)
 	if err == nil && existingUser.ID != "" {
-		return false, httperror.New(
-			http.StatusConflict,
-			"Пользователь с таким email уже зарегистрирован",
-		)
+		return false, sys.NewError(sys.ErrUserAlreadyExists, "")
 	}
 	existingUser, err = s.userService.GetOneByNickName(ctx, req.NickName)
 	if err == nil && existingUser.ID != "" {
-		return false, httperror.New(
-			http.StatusConflict,
-			"Пользователь с таким ником уже зарегистрирован",
-		)
+		return false, sys.NewError(sys.ErrUserAlreadyExists, "")
 	}
 	hashedPassword, err := s.userService.HashPassword(ctx, req.Password)
 	if err != nil {
-		return false, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return false, sys.NewError(sys.ErrPasswordHashGeneration, err.Error())
 	}
 
 	jwtKey := []byte(s.cfg.App.JwtSecretKey)
 
 	verificationToken, err := s.tokenService.GenerateEmailToken(req.Email, jwtKey, time.Hour*2)
 	if err != nil {
-		return false, httperror.New(
-			http.StatusInternalServerError,
-			"Не удалось создать токен для подтверждения email",
-		)
+		return false, sys.NewError(sys.ErrCreateToken, err.Error())
 	}
 
 	newUser := model.User{
@@ -109,10 +89,7 @@ func (s *AuthService) Register(ctx context.Context, req model.User) (bool, error
 
 	createdUser, err := s.userService.Create(ctx, newUser)
 	if err != nil {
-		return false, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return false, sys.NewError(sys.ErrCreateUser, err.Error())
 	}
 
 	go func() {
@@ -136,17 +113,11 @@ func (s *AuthService) Verify(ctx context.Context, token string) error {
 	jwtKey := []byte(s.cfg.App.JwtSecretKey)
 	email, err := s.tokenService.ValidateEmailToken(token, jwtKey)
 	if err != nil {
-		return httperror.New(
-			http.StatusBadRequest,
-			"Неверный токен",
-		)
+		return sys.NewError(sys.ErrInvalidToken, err.Error())
 	}
 	userNotVerified, err := s.userService.GetOneByEmail(ctx, email)
 	if err != nil {
-		return httperror.New(
-			http.StatusNotFound,
-			"Пользователь не найден",
-		)
+		return sys.NewError(sys.ErrUserNotFound, err.Error())
 	}
 	user := model.User{
 		ID:            userNotVerified.ID,
@@ -155,10 +126,7 @@ func (s *AuthService) Verify(ctx context.Context, token string) error {
 	}
 
 	if _, err := s.userService.UpdateForVerify(ctx, user); err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return sys.NewError(sys.ErrUpdateUser, err.Error())
 	}
 	return nil
 }
@@ -167,10 +135,7 @@ func (s *AuthService) Me(ctx context.Context, userId string) (model.User, error)
 	user, err := s.userService.GetOneById(ctx, userId)
 
 	if err != nil {
-		return model.User{}, httperror.New(
-			http.StatusNotFound,
-			"Пользователь не найден",
-		)
+		return model.User{}, sys.NewError(sys.ErrUserNotFound, err.Error())
 	}
 
 	lastActivity := time.Now().Format("2006-01-02 15:04:05")
@@ -180,10 +145,7 @@ func (s *AuthService) Me(ctx context.Context, userId string) (model.User, error)
 	})
 
 	if err != nil {
-		return model.User{}, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return model.User{}, sys.NewError(sys.ErrUpdateUser, err.Error())
 	}
 
 	return user, nil

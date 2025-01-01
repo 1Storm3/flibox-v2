@@ -45,7 +45,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httperror.Error"
+                            "$ref": "#/definitions/sys.Error"
                         }
                     }
                 }
@@ -71,7 +71,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httperror.Error": {
+        "sys.Error": {
             "type": "object"
         }
     }

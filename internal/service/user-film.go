@@ -2,12 +2,14 @@ package service
 
 import (
 	"context"
-	"net/http"
+	"errors"
+
+	"gorm.io/gorm"
 
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/mapper"
 	"github.com/1Storm3/flibox-api/internal/model"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type UserFilmService struct {
@@ -21,31 +23,36 @@ func NewUserFilmService(userFilmRepo UserFilmRepo) *UserFilmService {
 }
 
 func (s *UserFilmService) AddMany(ctx context.Context, params []dto.Params) error {
-	return s.userFilmRepo.AddMany(ctx, params)
+	err := s.userFilmRepo.AddMany(ctx, params)
+	if err != nil {
+		return sys.NewError(sys.ErrDatabaseFailure, err.Error())
+	}
+	return nil
 }
 
 func (s *UserFilmService) DeleteMany(ctx context.Context, userID string) error {
-	return s.userFilmRepo.DeleteMany(ctx, userID)
+	err := s.userFilmRepo.DeleteMany(ctx, userID)
+	if err != nil {
+		return sys.NewError(sys.ErrDatabaseFailure, err.Error())
+	}
+	return nil
 }
 
 func (s *UserFilmService) GetAll(ctx context.Context, userId string, typeUserFilm dto.TypeUserFilm, limit int) ([]model.UserFilm, error) {
 	result, err := s.userFilmRepo.GetAllForRecommend(ctx, userId, typeUserFilm, limit)
 
 	if err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []model.UserFilm{}, nil
+		}
+		return []model.UserFilm{}, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 	}
 	if len(result) == 0 {
 		if typeUserFilm == dto.TypeUserFavourite {
-			return []model.UserFilm{}, httperror.New(
-				http.StatusNotFound,
-				"Избранные фильмы не найдены у этого пользователя",
-			)
+			return []model.UserFilm{}, sys.NewError(sys.ErrFavouriteNotFound, "Пользователь не добавил ни одного фильма в избранное")
 		} else {
 			return []model.UserFilm{},
-				httperror.New(
-					http.StatusNotFound,
-					"Рекомендации не найдены у этого пользователя",
-				)
+				sys.NewError(sys.ErrRecommendationsNotFound, "Рекомендации не найдены")
 		}
 	}
 
@@ -58,9 +65,17 @@ func (s *UserFilmService) GetAll(ctx context.Context, userId string, typeUserFil
 }
 
 func (s *UserFilmService) Add(ctx context.Context, params dto.Params) error {
-	return s.userFilmRepo.Add(ctx, params)
+	err := s.userFilmRepo.Add(ctx, params)
+	if err != nil {
+		return sys.NewError(sys.ErrDatabaseFailure, err.Error())
+	}
+	return nil
 }
 
 func (s *UserFilmService) Delete(ctx context.Context, params dto.Params) error {
-	return s.userFilmRepo.Delete(ctx, params)
+	err := s.userFilmRepo.Delete(ctx, params)
+	if err != nil {
+		return sys.NewError(sys.ErrDatabaseFailure, err.Error())
+	}
+	return nil
 }

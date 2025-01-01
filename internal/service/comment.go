@@ -2,10 +2,14 @@ package service
 
 import (
 	"context"
+	"errors"
+	"strings"
 
-	"github.com/1Storm3/flibox-api/internal/dto"
+	"gorm.io/gorm"
+
 	"github.com/1Storm3/flibox-api/internal/mapper"
 	"github.com/1Storm3/flibox-api/internal/model"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type CommentService struct {
@@ -24,7 +28,10 @@ func (c *CommentService) Create(ctx context.Context, comment model.Comment) (mod
 	result, err := c.commentRepo.Create(ctx, commentRepo)
 
 	if err != nil {
-		return model.Comment{}, err
+		if strings.Contains(err.Error(), "violates foreign key") {
+			return model.Comment{}, sys.NewError(sys.ErrParentCommentNotFound, err.Error())
+		}
+		return model.Comment{}, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 	}
 	return mapper.MapCommentRepoDTOToCommentModel(result), nil
 }
@@ -32,7 +39,10 @@ func (c *CommentService) Create(ctx context.Context, comment model.Comment) (mod
 func (c *CommentService) GetOne(ctx context.Context, commentID string) (model.Comment, error) {
 	result, err := c.commentRepo.GetOne(ctx, commentID)
 	if err != nil {
-		return model.Comment{}, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return model.Comment{}, sys.NewError(sys.ErrCommentNotFound, err.Error())
+		}
+		return model.Comment{}, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 	}
 
 	return mapper.MapCommentRepoDTOToCommentModel(result), nil
@@ -44,14 +54,14 @@ func (c *CommentService) Update(ctx context.Context, comment model.Comment, comm
 	result, err := c.commentRepo.Update(ctx, commentDto, commentID)
 
 	if err != nil {
-		return model.Comment{}, err
+		return model.Comment{}, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 	}
 
 	return mapper.MapCommentRepoDTOToCommentModel(result), nil
 }
 
 func (c *CommentService) Delete(ctx context.Context, commentID string) error {
-	comment, err := c.commentRepo.GetOne(ctx, commentID)
+	comment, err := c.GetOne(ctx, commentID)
 
 	if err != nil {
 		return err
@@ -60,40 +70,40 @@ func (c *CommentService) Delete(ctx context.Context, commentID string) error {
 	if comment.ParentID == nil {
 		countChildComments, err := c.commentRepo.GetCountByParentId(ctx, commentID)
 		if err != nil {
-			return err
+			return sys.NewError(sys.ErrDatabaseFailure, err.Error())
 		}
 		if countChildComments != 0 {
-			_, err := c.commentRepo.Update(ctx, dto.CommentRepoDTO{Content: nil}, commentID)
+			_, err := c.Update(ctx, model.Comment{Content: nil}, commentID)
 			if err != nil {
 				return err
 			}
 		} else {
 			err := c.commentRepo.Delete(ctx, commentID)
 			if err != nil {
-				return err
+				return sys.NewError(sys.ErrDatabaseFailure, err.Error())
 			}
 		}
 	} else {
 		countSiblingComment, err := c.commentRepo.GetCountByParentId(ctx, *comment.ParentID)
 		if err != nil {
-			return err
+			return sys.NewError(sys.ErrDatabaseFailure, err.Error())
 		}
 		if countSiblingComment == 1 {
-			parentComment, err := c.commentRepo.GetOne(ctx, *comment.ParentID)
+			parentComment, err := c.GetOne(ctx, *comment.ParentID)
 			if err != nil {
 				return err
 			}
 			if parentComment.Content == nil {
 				err := c.commentRepo.Delete(ctx, *comment.ParentID)
 				if err != nil {
-					return err
+					return sys.NewError(sys.ErrDatabaseFailure, err.Error())
 				}
 			}
 		}
 
 		err = c.commentRepo.Delete(ctx, commentID)
 		if err != nil {
-			return err
+			return sys.NewError(sys.ErrDatabaseFailure, err.Error())
 		}
 	}
 
@@ -104,7 +114,10 @@ func (c *CommentService) GetAllByFilmId(ctx context.Context, filmID string, page
 	comments, totalRecords, err := c.commentRepo.GetAllByFilmId(ctx, filmID, page, pageSize)
 
 	if err != nil {
-		return []model.Comment{}, 0, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []model.Comment{}, 0, nil
+		}
+		return []model.Comment{}, 0, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 	}
 
 	var commentsDTO []model.Comment

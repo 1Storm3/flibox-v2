@@ -3,16 +3,19 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
+	"gorm.io/gorm"
+
 	"github.com/1Storm3/flibox-api/internal/config"
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/model"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type FilmsSimilarService struct {
@@ -35,7 +38,10 @@ func (s *FilmsSimilarService) GetAll(ctx context.Context, filmId string) ([]mode
 	result, err := s.filmSimilarRepo.GetAll(ctx, filmId)
 
 	if err != nil {
-		return []model.FilmSimilar{}, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []model.FilmSimilar{}, nil
+		}
+		return []model.FilmSimilar{}, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 	}
 
 	if len(result) > 0 {
@@ -54,7 +60,7 @@ func (s *FilmsSimilarService) GetAll(ctx context.Context, filmId string) ([]mode
 	}
 	similars, err := s.FetchSimilar(ctx, filmId)
 	if err != nil {
-		return []model.FilmSimilar{}, fmt.Errorf("failed to fetch similar from Kinopoisk API: %w", err)
+		return []model.FilmSimilar{}, err
 	}
 	return similars, nil
 }
@@ -65,10 +71,7 @@ func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) (
 	req, err := http.NewRequest("GET", baseUrlForAllSimilar, nil)
 
 	if err != nil {
-		return []model.FilmSimilar{}, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return []model.FilmSimilar{}, sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	req.Header.Add("X-API-KEY", apikey)
@@ -78,10 +81,7 @@ func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) (
 
 	if err != nil {
 		return []model.FilmSimilar{},
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+			sys.NewError(sys.ErrUnknown, err.Error())
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -91,19 +91,13 @@ func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) (
 	}(resAllSimilars.Body)
 
 	if resAllSimilars.StatusCode != http.StatusOK {
-		return []model.FilmSimilar{}, httperror.New(
-			http.StatusConflict,
-			"Код ответа Kinopoisk API: "+resAllSimilars.Status,
-		)
+		return []model.FilmSimilar{}, sys.NewError(sys.ErrUnknown, "Похожие фильмы не найдены")
 	}
 	bodyAllSimilars, err := io.ReadAll(resAllSimilars.Body)
 
 	if err != nil {
 		return []model.FilmSimilar{},
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+			sys.NewError(sys.ErrUnknown, err.Error())
 	}
 
 	var apiResponse struct {
@@ -112,38 +106,33 @@ func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) (
 	}
 
 	if apiResponse.Total == 0 || len(apiResponse.Items) == 0 {
-		return nil, httperror.New(
-			http.StatusNotFound,
-			"Похожие фильмы не найдены",
-		)
+		return nil, sys.NewError(sys.ErrUnknown, "Похожие фильмы не найдены")
 	}
 
 	err = json.Unmarshal(bodyAllSimilars, &apiResponse)
 
 	if err != nil {
 		return []model.FilmSimilar{},
-			httperror.New(
-				http.StatusInternalServerError,
-				err.Error(),
-			)
+			sys.NewError(sys.ErrUnknown, err.Error())
 	}
 	var similars []model.FilmSimilar
 	for _, similar := range apiResponse.Items {
 		filmIsExist, err := s.filmService.GetOne(ctx, strconv.Itoa(similar.FilmId))
 
+		if err != nil {
+			return []model.FilmSimilar{}, err
+		}
+
 		filmIdInt, err := strconv.Atoi(filmId)
 
 		if err != nil {
 			return []model.FilmSimilar{},
-				httperror.New(
-					http.StatusInternalServerError,
-					err.Error(),
-				)
+				sys.NewError(sys.ErrInvalidRequestData, err.Error())
 		}
 
 		err = s.filmSimilarRepo.Save(ctx, filmIdInt, similar.FilmId)
 		if err != nil {
-			return nil, err
+			return nil, sys.NewError(sys.ErrDatabaseFailure, err.Error())
 		}
 
 		similars = append(similars, model.FilmSimilar{

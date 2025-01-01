@@ -2,15 +2,12 @@ package repo
 
 import (
 	"context"
-	"errors"
-	"net/http"
 	"strconv"
 
 	"gorm.io/gorm"
 
 	"github.com/1Storm3/flibox-api/database/postgres"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type UserFilmRepo struct {
@@ -26,13 +23,7 @@ func NewUserFilmRepo(storage *postgres.Storage) *UserFilmRepo {
 func (u *UserFilmRepo) AddMany(ctx context.Context, params []dto.Params) error {
 	var userFilms []dto.UserFilmRepoDTO
 	for _, param := range params {
-		filmIdInt, err := strconv.Atoi(param.FilmID)
-		if err != nil {
-			return httperror.New(
-				http.StatusBadRequest,
-				err.Error(),
-			)
-		}
+		filmIdInt, _ := strconv.Atoi(param.FilmID)
 		userFilms = append(userFilms, dto.UserFilmRepoDTO{
 			UserID: param.UserID,
 			FilmID: filmIdInt,
@@ -40,34 +31,28 @@ func (u *UserFilmRepo) AddMany(ctx context.Context, params []dto.Params) error {
 		})
 	}
 
-	result := u.storage.DB().WithContext(ctx).Table("user_films").Create(&userFilms)
-	if result.Error != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			result.Error.Error(),
-		)
+	err := u.storage.DB().WithContext(ctx).Table("user_films").Create(&userFilms).Error
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (u *UserFilmRepo) DeleteMany(ctx context.Context, userID string) error {
-	result := u.storage.DB().
+	err := u.storage.DB().
 		WithContext(ctx).
 		Where("user_id = ? AND type = ?", userID, dto.TypeUserRecommend).
 		Table("user_films").
-		Delete(&dto.UserFilmRepoDTO{})
-	if result.Error != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			result.Error.Error(),
-		)
+		Delete(&dto.UserFilmRepoDTO{}).Error
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (u *UserFilmRepo) GetAllForRecommend(ctx context.Context, userId string, typeUserFilm dto.TypeUserFilm, limit int) ([]dto.UserFilmRepoDTO, error) {
 	var userFilms []dto.UserFilmRepoDTO
-	result := u.storage.DB().
+	err := u.storage.DB().
 		WithContext(ctx).
 		Where("user_id = ?", userId).
 		Where("type = ?", typeUserFilm).
@@ -76,51 +61,32 @@ func (u *UserFilmRepo) GetAllForRecommend(ctx context.Context, userId string, ty
 		}).
 		Limit(limit).
 		Table("user_films").
-		Find(&userFilms)
+		Find(&userFilms).Error
 
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return []dto.UserFilmRepoDTO{}, nil
-
-	} else if result.Error != nil {
-		return []dto.UserFilmRepoDTO{},
-			httperror.New(
-				http.StatusInternalServerError,
-				result.Error.Error(),
-			)
+	if err != nil {
+		return nil, err
 	}
 	return userFilms, nil
 }
 
 func (u *UserFilmRepo) Add(ctx context.Context, params dto.Params) error {
-	filmIDInt, err := strconv.Atoi(params.FilmID)
-	if err != nil {
-		return httperror.New(
-			http.StatusBadRequest,
-			"Неверный формат ID фильма",
-		)
-	}
+	filmIDInt, _ := strconv.Atoi(params.FilmID)
 
 	isFavourite := u.storage.DB().WithContext(ctx).
 		Where("user_id = ? AND film_id = ? AND type = ?", params.UserID, filmIDInt, params.Type).
 		Table("user_films").
 		Find(&dto.UserFilmRepoDTO{})
 	if isFavourite.RowsAffected > 0 {
-		return httperror.New(
-			http.StatusConflict,
-			"Фильм уже добавлен в избранное",
-		)
+		return nil
 	}
 
-	result := u.storage.DB().WithContext(ctx).Table("user_films").Create(&dto.UserFilmRepoDTO{
+	err := u.storage.DB().WithContext(ctx).Table("user_films").Create(&dto.UserFilmRepoDTO{
 		UserID: params.UserID,
 		FilmID: filmIDInt,
 		Type:   params.Type,
-	})
-	if result.Error != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			result.Error.Error(),
-		)
+	}).Error
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -131,21 +97,15 @@ func (u *UserFilmRepo) Delete(ctx context.Context, params dto.Params) error {
 		Table("user_films").
 		Find(&dto.UserFilmRepoDTO{})
 	if isFavourite.RowsAffected == 0 {
-		return httperror.New(
-			http.StatusNotFound,
-			"Фильм не найден в избранном",
-		)
+		return nil
 	}
 
-	result := u.storage.DB().WithContext(ctx).
+	err := u.storage.DB().WithContext(ctx).
 		Where("user_id = ? AND film_id = ? AND type = ?", params.UserID, params.FilmID, params.Type).
 		Table("user_films").
-		Delete(&dto.UserFilmRepoDTO{})
-	if result.Error != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			result.Error.Error(),
-		)
+		Delete(&dto.UserFilmRepoDTO{}).Error
+	if err != nil {
+		return err
 	}
 	return nil
 }

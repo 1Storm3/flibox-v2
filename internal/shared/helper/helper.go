@@ -3,7 +3,11 @@ package helper
 import (
 	"bytes"
 	_ "embed"
+	"errors"
+	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/pkg/logger"
+	"github.com/1Storm3/flibox-api/pkg/sys"
+	"github.com/gofiber/fiber/v2"
 	"net/url"
 	"strings"
 	"text/template"
@@ -44,4 +48,27 @@ func TakeHTMLTemplate(appUrl, verificationToken string) (string, error) {
 		return "", err
 	}
 	return emailBody.String(), nil
+}
+
+func ExtractUserFilmParams(c *fiber.Ctx) (userID, filmID string, typeUserFilm dto.TypeUserFilm, err error) {
+	userID = c.Locals("userClaims").(*dto.Claims).UserID
+	filmID = c.Params("filmId")
+
+	typeUserFilmReq := c.Query("type")
+	if err := ParseTypeUserFilm(typeUserFilmReq, &typeUserFilm); err != nil {
+		return "", "", "", sys.NewError(sys.ErrInvalidRequestData, err.Error())
+	}
+	return userID, filmID, typeUserFilm, nil
+}
+
+func ParseTypeUserFilm(s string, t *dto.TypeUserFilm) error {
+	switch s {
+	case string(dto.TypeUserFavourite):
+		*t = dto.TypeUserFavourite
+	case string(dto.TypeUserRecommend):
+		*t = dto.TypeUserRecommend
+	default:
+		return errors.New("Неверный тип фильма: " + s)
+	}
+	return nil
 }

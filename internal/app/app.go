@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/1Storm3/flibox-api/pkg/kafka"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -20,7 +21,6 @@ import (
 	"github.com/1Storm3/flibox-api/internal/metrics/interceptor"
 	"github.com/1Storm3/flibox-api/internal/repo"
 	"github.com/1Storm3/flibox-api/internal/service"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 	"github.com/1Storm3/flibox-api/pkg/logger"
 )
 
@@ -180,9 +180,9 @@ func (a *App) customErrorHandler() fiber.ErrorHandler {
 		code := fiber.StatusInternalServerError
 		var message string
 
-		var httpErr *httperror.Error
+		var httpErr *sys.Error
 		if errors.As(err, &httpErr) {
-			code = httpErr.Code()
+			code = sys.ErrorMap[httpErr.Message]
 			message = httpErr.Error()
 		}
 

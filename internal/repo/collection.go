@@ -2,14 +2,11 @@ package repo
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"gorm.io/gorm"
 
 	"github.com/1Storm3/flibox-api/database/postgres"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
 type CollectionRepo struct {
@@ -33,7 +30,12 @@ func (c *CollectionRepo) GetAllMy(ctx context.Context, page, pageSize int, userI
 		Preload("User", func(db *gorm.DB) *gorm.DB {
 			return db.Table("users")
 		}).
-		Where("user_id = ?", userID).Table("collections").Order("created_at DESC").Limit(pageSize).Offset((page - 1) * pageSize).Find(&collections).Error
+		Where("user_id = ?", userID).Table("collections").
+		Order("created_at DESC").
+		Limit(pageSize).
+		Offset((page - 1) * pageSize).
+		Find(&collections).
+		Error
 	if err != nil {
 		return []dto.CollectionRepoDTO{}, 0, err
 	}
@@ -65,10 +67,7 @@ func (c *CollectionRepo) Delete(ctx context.Context, collectionId string) error 
 		Delete(&dto.CollectionRepoDTO{}).Error
 
 	if err != nil {
-		return httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return err
 	}
 	return nil
 }
@@ -76,10 +75,7 @@ func (c *CollectionRepo) Delete(ctx context.Context, collectionId string) error 
 func (c *CollectionRepo) Update(ctx context.Context, collection dto.CollectionRepoDTO) (dto.CollectionRepoDTO, error) {
 	err := c.storage.DB().WithContext(ctx).Table("collections").Model(&collection).Where("id = ?", collection.ID).Updates(collection).Error
 	if err != nil {
-		return dto.CollectionRepoDTO{}, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return dto.CollectionRepoDTO{}, err
 	}
 
 	err = c.storage.DB().WithContext(ctx).
@@ -88,10 +84,7 @@ func (c *CollectionRepo) Update(ctx context.Context, collection dto.CollectionRe
 		}).
 		Table("collections").First(&collection, "id = ?", collection.ID).Error
 	if err != nil {
-		return dto.CollectionRepoDTO{}, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+		return dto.CollectionRepoDTO{}, err
 	}
 	return collection, nil
 }
@@ -106,16 +99,7 @@ func (c *CollectionRepo) GetOne(ctx context.Context, collectionId string) (dto.C
 		Table("collections").
 		First(&collection).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return dto.CollectionRepoDTO{}, httperror.New(
-				http.StatusNotFound,
-				"Коллекция не найдена",
-			)
-		}
-		return dto.CollectionRepoDTO{}, httperror.New(
-			http.StatusInternalServerError,
-			err.Error(),
-		)
+
 	}
 	return collection, nil
 }
