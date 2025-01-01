@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"github.com/1Storm3/flibox-api/pkg/kafka"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -61,6 +62,8 @@ func (a *App) Run(ctx context.Context) error {
 	// email
 	emailService := service.NewEmailService(cfg)
 
+	//kafka
+	kafkaProducer := kafka.NewProducer([]string{"host.docker.internal:9092"}, "favorite")
 	// token
 	tokenService := service.NewTokenService()
 	// user
@@ -101,7 +104,7 @@ func (a *App) Run(ctx context.Context) error {
 	// recommend
 	recommendService := service.NewRecommendService(historyFilmsService, filmService, userFilmService, grpcClient)
 
-	userFilmController := http.NewUserFilmController(userFilmService, filmService, recommendService)
+	userFilmController := http.NewUserFilmController(userFilmService, filmService, recommendService, kafkaProducer)
 	historyFilmsController := http.NewHistoryFilmsController(historyFilmsService, recommendService)
 
 	// comment

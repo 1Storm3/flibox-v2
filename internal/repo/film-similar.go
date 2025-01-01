@@ -9,7 +9,6 @@ import (
 
 	"github.com/1Storm3/flibox-api/database/postgres"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
@@ -64,7 +63,7 @@ func (s *FilmSimilarRepo) Save(ctx context.Context, filmID int, similarID int) e
 	}
 
 	createdResult := s.storage.DB().WithContext(ctx).
-		Table("film_similars").Create(&model.FilmSimilar{
+		Table("film_similars").Create(&dto.FilmSimilarRepoDTO{
 		FilmID:    filmID,
 		SimilarID: similarID,
 	})

@@ -10,7 +10,6 @@ import (
 
 	"github.com/1Storm3/flibox-api/database/postgres"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
@@ -25,7 +24,7 @@ func NewUserFilmRepo(storage *postgres.Storage) *UserFilmRepo {
 }
 
 func (u *UserFilmRepo) AddMany(ctx context.Context, params []dto.Params) error {
-	var userFilms []model.UserFilm
+	var userFilms []dto.UserFilmRepoDTO
 	for _, param := range params {
 		filmIdInt, err := strconv.Atoi(param.FilmID)
 		if err != nil {
@@ -34,7 +33,7 @@ func (u *UserFilmRepo) AddMany(ctx context.Context, params []dto.Params) error {
 				err.Error(),
 			)
 		}
-		userFilms = append(userFilms, model.UserFilm{
+		userFilms = append(userFilms, dto.UserFilmRepoDTO{
 			UserID: param.UserID,
 			FilmID: filmIdInt,
 			Type:   param.Type,
@@ -112,7 +111,7 @@ func (u *UserFilmRepo) Add(ctx context.Context, params dto.Params) error {
 		)
 	}
 
-	result := u.storage.DB().WithContext(ctx).Table("user_films").Create(&model.UserFilm{
+	result := u.storage.DB().WithContext(ctx).Table("user_films").Create(&dto.UserFilmRepoDTO{
 		UserID: params.UserID,
 		FilmID: filmIDInt,
 		Type:   params.Type,

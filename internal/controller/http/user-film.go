@@ -3,6 +3,8 @@ package http
 import (
 	"context"
 	"errors"
+	"github.com/1Storm3/flibox-api/pkg/kafka"
+	"github.com/1Storm3/flibox-api/pkg/logger"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,24 +12,26 @@ import (
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
-	"github.com/1Storm3/flibox-api/pkg/logger"
 )
 
 type UserFilmController struct {
 	userFilmService  controller.UserFilmService
 	filmService      controller.FilmService
 	recommendService controller.RecommendService
+	kafkaProducer    *kafka.Producer
 }
 
 func NewUserFilmController(
 	userFilmService controller.UserFilmService,
 	filmService controller.FilmService,
 	recommendService controller.RecommendService,
+	kafkaProducer *kafka.Producer,
 ) *UserFilmController {
 	return &UserFilmController{
 		userFilmService:  userFilmService,
 		filmService:      filmService,
 		recommendService: recommendService,
+		kafkaProducer:    kafkaProducer,
 	}
 }
 
@@ -75,6 +79,17 @@ func (g *UserFilmController) Add(c *fiber.Ctx) error {
 				logger.Error(err.Error())
 			}
 		}()
+
+		//go func() {
+		//	err := g.kafkaProducer.Produce(map[string]interface{}{
+		//		"user_id": userID,
+		//		"film_id": filmID,
+		//	})
+		//	if err != nil {
+		//		logger.Info("Произошла ошибка при отправке сообщения в Kafka")
+		//		logger.Error(err.Error())
+		//	}
+		//}()
 	}
 
 	return c.JSON(fiber.Map{

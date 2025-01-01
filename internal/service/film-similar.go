@@ -41,7 +41,7 @@ func (s *FilmsSimilarService) GetAll(ctx context.Context, filmId string) ([]mode
 	if len(result) > 0 {
 		var similars []model.FilmSimilar
 		for _, similar := range result {
-			res, err := s.filmService.GetOne(ctx, strconv.Itoa(similar.SimilarId))
+			res, err := s.filmService.GetOne(ctx, strconv.Itoa(similar.SimilarID))
 
 			if err != nil {
 				return []model.FilmSimilar{}, err

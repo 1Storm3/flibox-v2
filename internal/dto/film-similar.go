@@ -8,7 +8,7 @@ type GetExternalSimilarDTO struct {
 }
 
 type FilmSimilarRepoDTO struct {
-	FilmId    int         `json:"filmId" gorm:"column:film_id"`
-	SimilarId int         `json:"similarId" gorm:"column:similar_id"`
+	FilmID    int         `json:"filmId" gorm:"column:film_id"`
+	SimilarID int         `json:"similarId" gorm:"column:similar_id"`
 	Film      FilmRepoDTO `gorm:"foreignKey:FilmID;references:ID"`
 }

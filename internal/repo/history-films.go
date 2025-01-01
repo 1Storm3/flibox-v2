@@ -9,7 +9,6 @@ import (
 
 	"github.com/1Storm3/flibox-api/database/postgres"
 	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/internal/shared/httperror"
 )
 
@@ -54,7 +53,7 @@ func (r *HistoryFilmsRepo) Add(ctx context.Context, filmId, userId string) error
 	}
 	filmIdInt, _ := strconv.Atoi(filmId)
 	res := r.storage.DB().WithContext(ctx).
-		Table("history_films").Create(&model.HistoryFilms{
+		Table("history_films").Create(&dto.HistoryFilmsRepoDTO{
 		UserID: userId,
 		FilmID: filmIdInt,
 	})
