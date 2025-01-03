@@ -33,10 +33,10 @@ swagger:
 	swag init -g cmd/flibox-api/main.go -o ./docs
 
 test:
-	go test -v ./...
+	go test -cover -coverprofile=coverage.out ./...
 
 testService:
-	go test -cover -coverprofile=coverage.out ./internal/service
+	go test -cover -coverpkg=./internal/service/... -coverprofile=coverage.out ./internal/service/tests
 
 testTool:
 	go tool cover -func=coverage.out

@@ -1,12 +1,13 @@
 package closer
 
 import (
-	"github.com/1Storm3/flibox-api/pkg/logger"
 	"os"
 	"os/signal"
 	"sync"
 
 	"go.uber.org/zap"
+
+	"github.com/1Storm3/flibox-api/pkg/logger"
 )
 
 // создаем глобальный closer

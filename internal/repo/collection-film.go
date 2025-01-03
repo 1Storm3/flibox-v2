@@ -17,7 +17,7 @@ func NewCollectionFilmRepo(storage *postgres.Storage) *CollectionFilmRepo {
 	}
 }
 
-func (c *CollectionFilmRepo) GetFilmsByCollectionId(
+func (c *CollectionFilmRepo) GetFilmsByCollectionID(
 	ctx context.Context,
 	collectionID string,
 	page int, pageSize int,
@@ -53,13 +53,13 @@ func (c *CollectionFilmRepo) GetFilmsByCollectionId(
 
 func (c *CollectionFilmRepo) Add(
 	ctx context.Context,
-	collectionId string,
-	filmId int,
+	collectionID string,
+	filmID int,
 ) error {
 	var collection dto.CollectionRepoDTO
 	err := c.storage.DB().WithContext(ctx).
 		Table("collections").
-		Where("id = ?", collectionId).
+		Where("id = ?", collectionID).
 		First(&collection).Error
 
 	if err != nil {
@@ -67,8 +67,8 @@ func (c *CollectionFilmRepo) Add(
 	}
 
 	newCollectionFilm := &dto.CollectionFilmRepoDTO{
-		CollectionID: collectionId,
-		FilmID:       filmId,
+		CollectionID: collectionID,
+		FilmID:       filmID,
 	}
 	err = c.storage.DB().WithContext(ctx).Table("collection_films").Create(newCollectionFilm).Error
 

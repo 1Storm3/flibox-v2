@@ -1,14 +1,14 @@
 package http
 
 import (
-	"github.com/1Storm3/flibox-api/internal/mapper"
-	"github.com/1Storm3/flibox-api/pkg/sys"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/internal/mapper"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type AuthController struct {

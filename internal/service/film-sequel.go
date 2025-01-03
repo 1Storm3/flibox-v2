@@ -70,7 +70,7 @@ func (s *FilmSequelService) GetAll(ctx context.Context, filmId string) ([]model.
 func (s *FilmSequelService) FetchSequels(ctx context.Context, filmId string) ([]model.FilmSequel, error) {
 	apiKey := s.cfg.DB.ApiKey
 	baseUrlForAllSequels := fmt.Sprintf(baseUrlForAllSequels, filmId)
-	req, err := http.NewRequest("GET", baseUrlForAllSequels, nil)
+	req, err := http.NewRequest(http.MethodGet, baseUrlForAllSequels, nil)
 
 	if err != nil {
 		return []model.FilmSequel{}, sys.NewError(sys.ErrUnknown, err.Error())

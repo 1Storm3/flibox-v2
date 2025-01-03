@@ -52,7 +52,6 @@ func (s *UserService) GetOneByNickName(ctx context.Context, nickName string) (mo
 }
 
 func (s *UserService) GetOneById(ctx context.Context, id string) (model.User, error) {
-
 	user, err := s.userRepo.GetOneById(ctx, id)
 
 	if err != nil {
@@ -128,5 +127,4 @@ func (s *UserService) Update(ctx context.Context, userDTO model.User) (model.Use
 	}
 
 	return mapper.MapUserRepoDTOToUserModel(result), nil
-
 }

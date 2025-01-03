@@ -99,16 +99,16 @@ func (c *CollectionRepo) GetOne(ctx context.Context, collectionId string) (dto.C
 		Table("collections").
 		First(&collection).Error
 	if err != nil {
-
+		return dto.CollectionRepoDTO{}, err
 	}
 	return collection, nil
 }
 
 func (c *CollectionRepo) Create(ctx context.Context, collection dto.CollectionRepoDTO) (dto.CollectionRepoDTO, error) {
-	result := c.storage.DB().WithContext(ctx).Table("collections").Create(&collection)
+	err := c.storage.DB().WithContext(ctx).Table("collections").Create(&collection).Error
 
-	if result.Error != nil {
-		return dto.CollectionRepoDTO{}, result.Error
+	if err != nil {
+		return dto.CollectionRepoDTO{}, err
 	}
 	return collection, nil
 }

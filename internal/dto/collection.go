@@ -2,6 +2,7 @@ package dto
 
 import (
 	"github.com/lib/pq"
+
 	"time"
 )
 

@@ -45,13 +45,13 @@ func (r *HistoryFilmsRepo) Add(ctx context.Context, filmId, userId string) error
 	}
 	filmIdInt, _ := strconv.Atoi(filmId)
 
-	res := r.storage.DB().WithContext(ctx).
+	err := r.storage.DB().WithContext(ctx).
 		Table("history_films").Create(&dto.HistoryFilmsRepoDTO{
 		UserID: userId,
 		FilmID: filmIdInt,
 	}).Error
-	if res.Error != nil {
-
+	if err != nil {
+		return err
 	}
 	return nil
 }

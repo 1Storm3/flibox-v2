@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -27,7 +28,7 @@ func NewExternalService(cfg *config.Config) *ExternalService {
 func (s *ExternalService) SetExternalRequest(filmId string) (dto.GetExternalFilmDTO, error) {
 	apiKey := s.cfg.DB.ApiKey
 	urlAllFilms := fmt.Sprintf("%s%s", baseUrlForAllFilms, filmId)
-	req, err := http.NewRequest("GET", urlAllFilms, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, urlAllFilms, nil)
 	if err != nil {
 		return dto.GetExternalFilmDTO{},
 			sys.NewError(sys.ErrUnknown, err.Error())

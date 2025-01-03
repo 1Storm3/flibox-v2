@@ -3,7 +3,7 @@ package dto
 import "github.com/golang-jwt/jwt"
 
 // LoginDTO dtoAuth.LoginDTO представляет данные для входа пользователя
-// @swagger:model
+// @swagger:model.
 type LoginDTO struct {
 	// Email пользователя
 	// required: true

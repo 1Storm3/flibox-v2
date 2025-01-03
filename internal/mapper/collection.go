@@ -69,5 +69,4 @@ func MapCollectionModelToCollectionRepoDTO(collection model.Collection) dto.Coll
 		UpdatedAt:   parseTimeStringToTime(collection.UpdatedAt),
 		UserId:      collection.UserId,
 	}
-
 }

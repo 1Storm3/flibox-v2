@@ -3,8 +3,7 @@ package app
 import (
 	"context"
 	"errors"
-	"github.com/1Storm3/flibox-api/pkg/kafka"
-	"github.com/1Storm3/flibox-api/pkg/sys"
+	"github.com/1Storm3/flibox-api/internal/shared/helper"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -21,7 +20,9 @@ import (
 	"github.com/1Storm3/flibox-api/internal/metrics/interceptor"
 	"github.com/1Storm3/flibox-api/internal/repo"
 	"github.com/1Storm3/flibox-api/internal/service"
+	"github.com/1Storm3/flibox-api/pkg/kafka"
 	"github.com/1Storm3/flibox-api/pkg/logger"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type App struct {
@@ -37,6 +38,11 @@ func (a *App) Run(ctx context.Context) error {
 	a.initFiberServer()
 
 	a.initCORS()
+
+	err := a.initMetrics(ctx)
+	if err != nil {
+		return err
+	}
 
 	cfg := config.MustLoad()
 
@@ -72,7 +78,7 @@ func (a *App) Run(ctx context.Context) error {
 	userController := http.NewUserController(userService)
 
 	// auth
-	authService := service.NewAuthService(userService, emailService, cfg, tokenService)
+	authService := service.NewAuthService(userService, emailService, cfg, tokenService, helper.TakeHTMLTemplate)
 	authController := http.NewAuthController(authService)
 
 	// external
@@ -170,9 +176,8 @@ func (a *App) initMetrics(ctx context.Context) error {
 	return metrics.Init(ctx)
 }
 
-func (a *App) initLogger(_ context.Context) error {
+func (a *App) initLogger(_ context.Context) {
 	logger.Init(config.MustLoad().Env)
-	return nil
 }
 
 func (a *App) customErrorHandler() fiber.ErrorHandler {

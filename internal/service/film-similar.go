@@ -68,7 +68,7 @@ func (s *FilmsSimilarService) GetAll(ctx context.Context, filmId string) ([]mode
 func (s *FilmsSimilarService) FetchSimilar(ctx context.Context, filmId string) ([]model.FilmSimilar, error) {
 	apikey := s.cfg.DB.ApiKey
 	baseUrlForAllSimilar := fmt.Sprintf(baseUrlForAllSimilar, filmId)
-	req, err := http.NewRequest("GET", baseUrlForAllSimilar, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseUrlForAllSimilar, nil)
 
 	if err != nil {
 		return []model.FilmSimilar{}, sys.NewError(sys.ErrUnknown, err.Error())

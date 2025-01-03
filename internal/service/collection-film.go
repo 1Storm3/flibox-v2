@@ -67,7 +67,7 @@ func (c *CollectionFilmService) GetFilmsByCollectionId(
 	page int,
 	pageSize int,
 ) (films dto.FilmsByCollectionIdDTO, totalRecords int64, err error) {
-	result, totalRecords, err := c.collectionFilmRepo.GetFilmsByCollectionId(ctx, collectionID, page, pageSize)
+	result, totalRecords, err := c.collectionFilmRepo.GetFilmsByCollectionID(ctx, collectionID, page, pageSize)
 
 	if err != nil {
 		return dto.FilmsByCollectionIdDTO{}, 0, sys.NewError(sys.ErrDatabaseFailure, err.Error())

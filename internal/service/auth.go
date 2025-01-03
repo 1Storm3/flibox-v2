@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-
 	"time"
 
 	"go.uber.org/zap"
@@ -10,28 +9,31 @@ import (
 	"github.com/1Storm3/flibox-api/internal/config"
 	"github.com/1Storm3/flibox-api/internal/controller"
 	"github.com/1Storm3/flibox-api/internal/model"
-	"github.com/1Storm3/flibox-api/internal/shared/helper"
 	"github.com/1Storm3/flibox-api/pkg/logger"
 	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 type AuthService struct {
-	userService  controller.UserService
-	emailService controller.EmailService
-	cfg          *config.Config
-	tokenService controller.TokenService
+	userService      controller.UserService
+	emailService     controller.EmailService
+	cfg              *config.Config
+	tokenService     controller.TokenService
+	takeHTMLTemplate func(appUrl, verificationToken string) (string, error)
 }
 
 func NewAuthService(
 	userService controller.UserService,
 	emailService controller.EmailService,
 	cfg *config.Config,
-	tokenService controller.TokenService) *AuthService {
+	tokenService controller.TokenService,
+	takeHtmlTemplate func(appUrl, verificationToken string) (string, error),
+) *AuthService {
 	return &AuthService{
-		userService:  userService,
-		emailService: emailService,
-		cfg:          cfg,
-		tokenService: tokenService,
+		userService:      userService,
+		emailService:     emailService,
+		cfg:              cfg,
+		tokenService:     tokenService,
+		takeHTMLTemplate: takeHtmlTemplate,
 	}
 }
 
@@ -93,9 +95,10 @@ func (s *AuthService) Register(ctx context.Context, req model.User) (bool, error
 	}
 
 	go func() {
-		emailBody, err := helper.TakeHTMLTemplate(s.cfg.App.AppUrl, *verificationToken)
+		emailBody, err := s.takeHTMLTemplate(s.cfg.App.AppUrl, *verificationToken)
 		if err != nil {
 			logger.Error(err.Error())
+			return
 		}
 		if err := s.emailService.SendEmail(
 			createdUser.Email,
@@ -103,6 +106,7 @@ func (s *AuthService) Register(ctx context.Context, req model.User) (bool, error
 			"Подтверждение регистрации",
 		); err != nil {
 			logger.Error("Ошибка при отправке email", zap.Error(err))
+			return
 		}
 	}()
 

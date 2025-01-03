@@ -5,6 +5,8 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/1Storm3/flibox-api/pkg/logger"
 )
 
 type Storage struct {
@@ -16,7 +18,6 @@ func (s *Storage) DB() *gorm.DB {
 }
 
 func NewStorage(connectionString string) (*Storage, error) {
-
 	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("Ошибка при подключении к базе: %v", err)
@@ -31,7 +32,7 @@ func NewStorage(connectionString string) (*Storage, error) {
 		return nil, fmt.Errorf("Ошибка при подключении к базе: %v", err)
 	}
 
-	fmt.Println("Успешное подключение к базе!")
+	logger.Info("Успешное подключение к базе!")
 
 	return &Storage{db: db}, nil
 }

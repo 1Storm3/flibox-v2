@@ -23,5 +23,4 @@ func MapExternalGenreToString(genre []dto.Genre) []string {
 		genres = append(genres, g.Genre)
 	}
 	return genres
-
 }

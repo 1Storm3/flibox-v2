@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+
 	"github.com/1Storm3/flibox-api/internal/mapper"
 	"github.com/1Storm3/flibox-api/internal/model"
 	"github.com/1Storm3/flibox-api/pkg/sys"
@@ -21,6 +22,16 @@ func NewCollectionService(collectionRepo CollectionRepo) *CollectionService {
 
 func (c *CollectionService) Update(ctx context.Context, collection model.Collection) (model.Collection, error) {
 	collectionRepo := mapper.MapCollectionModelToCollectionRepoDTO(collection)
+
+	isExist, err := c.GetOne(ctx, collection.ID)
+
+	if err != nil {
+		return model.Collection{}, err
+	}
+
+	if isExist.ID == "" {
+		return model.Collection{}, sys.NewError(sys.ErrCollectionNotFound, "collection not found")
+	}
 
 	result, err := c.collectionRepo.Update(ctx, collectionRepo)
 

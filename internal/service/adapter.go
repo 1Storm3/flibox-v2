@@ -25,7 +25,7 @@ type FilmRepo interface {
 type CollectionFilmRepo interface {
 	Add(ctx context.Context, collectionId string, filmId int) error
 	Delete(ctx context.Context, collectionId string, filmId int) error
-	GetFilmsByCollectionId(ctx context.Context, collectionID string, page int, pageSize int) ([]dto.FilmRepoDTO, int64, error)
+	GetFilmsByCollectionID(ctx context.Context, collectionID string, page int, pageSize int) ([]dto.FilmRepoDTO, int64, error)
 }
 
 type CollectionRepo interface {

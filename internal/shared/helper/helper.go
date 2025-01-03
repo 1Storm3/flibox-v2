@@ -4,15 +4,16 @@ import (
 	"bytes"
 	_ "embed"
 	"errors"
-	"github.com/1Storm3/flibox-api/internal/dto"
-	"github.com/1Storm3/flibox-api/pkg/logger"
-	"github.com/1Storm3/flibox-api/pkg/sys"
-	"github.com/gofiber/fiber/v2"
 	"net/url"
 	"strings"
 	"text/template"
 
+	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
+
+	"github.com/1Storm3/flibox-api/internal/dto"
+	"github.com/1Storm3/flibox-api/pkg/logger"
+	"github.com/1Storm3/flibox-api/pkg/sys"
 )
 
 //go:embed template/email.html

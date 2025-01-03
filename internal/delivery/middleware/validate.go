@@ -9,11 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var validate *validator.Validate
-
-func init() {
-	validate = validator.New()
-}
+var validate = validator.New()
 
 func ValidateMiddleware[T any]() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -40,8 +36,8 @@ func ValidateMiddleware[T any]() fiber.Handler {
 					default:
 						errorMessages = append(errorMessages, fmt.Sprintf("Поле '%s' некорректно", fe.Field()))
 					}
-
 				}
+
 				return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 					"statusCode": http.StatusBadRequest,
 					"message":    errorMessages[0],

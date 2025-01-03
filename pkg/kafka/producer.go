@@ -3,8 +3,9 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"github.com/segmentio/kafka-go"
 	"log"
+
+	"github.com/segmentio/kafka-go"
 )
 
 type Producer struct {

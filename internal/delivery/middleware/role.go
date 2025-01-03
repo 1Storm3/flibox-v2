@@ -8,7 +8,11 @@ import (
 
 func RoleMiddleware(allowedRoles ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		userClaims := c.Locals("userClaims").(*dto.Claims)
+		userClaims, ok := c.Locals("userClaims").(*dto.Claims)
+		if !ok || userClaims == nil {
+			return sys.NewError(sys.ErrAccessDenied, "Недостаточно прав")
+		}
+
 		userRole := userClaims.Role
 
 		for _, role := range allowedRoles {
