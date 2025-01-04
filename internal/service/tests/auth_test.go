@@ -487,7 +487,7 @@ func TestAuthService_Register(t *testing.T) {
 				&config.Config{
 					App: config.AppConfig{
 						JwtSecretKey: "secret",
-						AppUrl:       "http://example.com",
+						AppUrl:       "https://example.com",
 					},
 				}, mockTokenService,
 				tt.mockTakeHTML,
